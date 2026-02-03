@@ -6,6 +6,7 @@
         <div class="col-xl-10 col-lg-11">
             <div class="card border-0 shadow-lg overflow-hidden" style="border-radius: 20px;">
                 <div class="row no-gutters">
+                    {{-- PANEL KIRI: INFO & FILTER --}}
                     <div class="col-lg-4 bg-gradient-primary p-5 d-flex flex-column justify-content-center text-white">
                         <div class="mb-4">
                             <i class="fas fa-id-badge fa-3x mb-3 text-white-50"></i>
@@ -54,7 +55,7 @@
                             @if(auth()->user()->role == 'admin' && !$targetGuruId)
                                 Silakan pilih guru terlebih dahulu.
                             @else
-                                Tidak ada jadwal aktif untuk guru ini saat ini.
+                                Tidak ada jadwal aktif untuk guru ini.
                             @endif
                         </div>
                         @endif
@@ -66,28 +67,42 @@
                         </div>
                     </div>
 
+                    {{-- PANEL KANAN: SCANNER AREA --}}
                     <div class="col-lg-8 bg-light p-4 p-md-5">
-                        @if($jadwalAktif)
-                        <div class="scanner-container position-relative mx-auto shadow-lg bg-black rounded-xl overflow-hidden" style="max-width: 600px; border-radius: 30px; border: 8px solid #fff;">
-                            <video id="video" autoplay muted playsinline style="width: 100%; height: auto; transform: scaleX(-1); display: block;"></video>
-                            
-                            <div class="scanner-overlay">
-                                <div class="face-frame"></div>
-                                <div class="scan-line"></div>
-                            </div>
+                        @php
+                            // Syarat Scanner Muncul: 
+                            // 1. Ada jadwal aktif
+                            // 2. Jika admin, HARUS sudah pilih guru
+                            $bolehScan = ($jadwalAktif && (auth()->user()->role !== 'admin' || $targetGuruId));
+                        @endphp
 
-                            <div class="position-absolute fixed-bottom p-4 text-center">
-                                <div id="result" class="badge badge-primary shadow-lg px-4 py-3" style="font-size: 1rem; border-radius: 50px; background: rgba(78, 115, 223, 0.9); backdrop-filter: blur(5px);">
-                                    <i class="fas fa-sync fa-spin mr-2"></i> Menyiapkan Sensor Wajah...
+                        @if($bolehScan)
+                            <div class="scanner-container position-relative mx-auto shadow-lg bg-black rounded-xl overflow-hidden" style="max-width: 600px; border-radius: 30px; border: 8px solid #fff; transition: all 0.3s ease;" id="scannerWrapper">
+                                <video id="video" autoplay muted playsinline style="width: 100%; height: auto; transform: scaleX(-1); display: block;"></video>
+                                
+                                <div class="scanner-overlay">
+                                    <div class="face-frame"></div>
+                                    <div class="scan-line"></div>
+                                </div>
+
+                                <div class="position-absolute fixed-bottom p-4 text-center">
+                                    <div id="result" class="badge badge-primary shadow-lg px-4 py-3" style="font-size: 1rem; border-radius: 50px; background: rgba(78, 115, 223, 0.9); backdrop-filter: blur(5px);">
+                                        <i class="fas fa-sync fa-spin mr-2"></i> Menyiapkan Sensor Wajah...
+                                    </div>
                                 </div>
                             </div>
-                        </div>
                         @else
-                        <div class="text-center py-5">
-                            <img src="https://illustrations.popsy.co/white/calendar.svg" style="width: 200px;" class="mb-4">
-                            <h4 class="text-muted">Scanner Tidak Tersedia</h4>
-                            <p class="text-secondary">Scanner hanya muncul saat ada jadwal pelajaran yang sedang berlangsung.</p>
-                        </div>
+                            <div class="text-center py-5">
+                                <img src="https://illustrations.popsy.co/white/calendar.svg" style="width: 200px;" class="mb-4">
+                                @if(auth()->user()->role == 'admin' && !$targetGuruId)
+                                    <h4 class="text-primary font-weight-bold">Mode Admin: Standby</h4>
+                                    <p class="text-secondary">Silakan pilih <strong>Identitas Guru</strong> pada panel kiri<br>untuk membuka akses scanner.</p>
+                                    <i class="fas fa-arrow-left fa-2x text-primary mt-3 animate-bounce-left"></i>
+                                @else
+                                    <h4 class="text-muted">Scanner Tidak Tersedia</h4>
+                                    <p class="text-secondary">Tidak ditemukan jadwal aktif untuk saat ini.</p>
+                                @endif
+                            </div>
                         @endif
                     </div>
                 </div>
@@ -97,22 +112,24 @@
 </div>
 
 <style>
-    /* ... (Style tetap sama dengan sebelumnya) ... */
     .bg-black { background-color: #000; }
     .letter-spacing-1 { letter-spacing: 1px; }
     .scanner-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; }
     .face-frame { width: 250px; height: 250px; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 40px; position: relative; box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5); }
-    .face-frame::before { content: ''; position: absolute; width: 40px; height: 40px; border: 4px solid #4e73df; top: -4px; left: -4px; border-right: 0; border-bottom: 0; border-radius: 15px 0 0 0; }
-    .face-frame::after { content: ''; position: absolute; width: 40px; height: 40px; border: 4px solid #4e73df; bottom: -4px; right: -4px; border-left: 0; border-top: 0; border-radius: 0 0 15px 0; }
+    .face-frame::before { content: ''; position: absolute; width: 40px; height: 40px; border: 4px solid #4e73df; top: -4px; left: -4px; border-radius: 15px 0 0 0; border-width: 4px 0 0 4px; }
+    .face-frame::after { content: ''; position: absolute; width: 40px; height: 40px; border: 4px solid #4e73df; bottom: -4px; right: -4px; border-radius: 0 0 15px 0; border-width: 0 4px 4px 0; }
     .scan-line { position: absolute; width: 100%; height: 4px; background: linear-gradient(to bottom, transparent, #4e73df, transparent); box-shadow: 0 0 15px #4e73df; animation: scanning 3s infinite linear; }
     @keyframes scanning { 0% { top: 10%; opacity: 0; } 50% { opacity: 1; } 100% { top: 90%; opacity: 0; } }
+    @keyframes bounceLeft { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-15px); } }
+    .animate-bounce-left { animation: bounceLeft 1s infinite; }
 </style>
 
-@if($jadwalAktif)
+@if($bolehScan)
 <script src="{{ asset('js/face-api/face-api.js') }}"></script>
 <script>
     const video = document.getElementById('video');
     const result = document.getElementById('result');
+    const scannerWrapper = document.getElementById('scannerWrapper');
     let isProcessing = false;
 
     const students = [
@@ -130,7 +147,7 @@
                 faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
             ]);
 
-            result.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Mendaftarkan Wajah Siswa...';
+            result.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sinkronisasi Wajah...';
             const labeledDescriptors = await loadSiswaDescriptors();
             
             if (labeledDescriptors.length === 0) {
@@ -145,7 +162,7 @@
             video.srcObject = stream;
 
             result.className = "badge badge-success shadow-lg px-4 py-3";
-            result.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Sistem Siap - Silakan Scan';
+            result.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Sistem Siap';
 
             video.addEventListener('play', () => {
                 setInterval(async () => {
@@ -162,7 +179,7 @@
             });
         } catch (err) {
             result.className = "badge badge-danger shadow-lg px-4 py-3";
-            result.innerHTML = '<i class="fas fa-times-circle mr-2"></i> Gagal Memuat Kamera/AI';
+            result.innerHTML = '<i class="fas fa-times-circle mr-2"></i> Kamera Tidak Aktif';
         }
     }
 
@@ -181,6 +198,8 @@
 
     async function handleAbsensi(siswaId, nama) {
         isProcessing = true;
+        
+        // Feedback Visual & Audio yang lembut
         result.className = "badge badge-warning shadow-lg px-4 py-3";
         result.innerHTML = `<i class="fas fa-user-check mr-2"></i> Mengenali: ${nama}...`;
 
@@ -198,7 +217,15 @@
             if (data.status === 'success') {
                 result.className = "badge badge-success shadow-lg px-4 py-3";
                 result.innerHTML = `<i class="fas fa-check-double mr-2"></i> Hadir: ${nama}`;
-                new Audio('https://www.soundjay.com/buttons/beep-07a.mp3').play();
+                
+                // AUDIO: Volume 0.2 (Sangat lembut agar tidak kaget)
+                let audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); 
+                audio.volume = 0.2;
+                audio.play();
+
+                // VISUAL: Border Hijau
+                scannerWrapper.style.borderColor = "#28a745";
+                setTimeout(() => { scannerWrapper.style.borderColor = "#fff"; }, 2000);
             } else {
                 result.innerHTML = `<i class="fas fa-info-circle mr-2"></i> ${nama} Sudah Absen`;
             }
@@ -209,9 +236,10 @@
         setTimeout(() => {
             isProcessing = false;
             result.className = "badge badge-primary shadow-lg px-4 py-3";
-            result.innerHTML = '<i class="fas fa-user-shield mr-2"></i> Sensor Aktif - Memindai...';
+            result.innerHTML = '<i class="fas fa-user-shield mr-2"></i> Memindai Wajah...';
         }, 5000);
     }
+    
     initAI();
 </script>
 @endif
