@@ -16,6 +16,13 @@
         </div>
     @endif
 
+    @if(session('error'))
+        <div class="alert alert-danger shadow alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle mr-2"></i> {{ session('error') }}
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+        </div>
+    @endif
+
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <h6 class="m-0 font-weight-bold text-primary">Daftar Jadwal Mengajar</h6>
@@ -23,7 +30,7 @@
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-                    <thead>
+                    <thead class="bg-light">
                         <tr>
                             <th>Hari</th>
                             <th>Waktu</th>
@@ -37,19 +44,93 @@
                         @foreach($jadwals as $j)
                         <tr>
                             <td><strong>{{ $j->hari }}</strong></td>
-                            <td>{{ $j->jam_mulai }} - {{ $j->jam_selesai }}</td>
+                            <td><span class="badge badge-info">{{ substr($j->jam_mulai, 0, 5) }} - {{ substr($j->jam_selesai, 0, 5) }}</span></td>
                             <td>{{ $j->rombel->nama_rombel }}</td>
                             <td>{{ $j->mapel->nama_mapel }}</td>
                             <td>{{ $j->guru->nama_guru }}</td>
                             <td>
-                                <form action="{{ route('jadwal.destroy', $j->id) }}" method="POST">
-                                    @csrf @method('DELETE')
-                                    <button class="btn btn-danger btn-sm" onclick="return confirm('Hapus jadwal?')">
-                                        <i class="fas fa-trash"></i>
+                                <div class="d-flex">
+                                    <button class="btn btn-warning btn-sm mr-1" 
+                                            data-toggle="modal" 
+                                            data-target="#editModal{{ $j->id }}">
+                                        <i class="fas fa-edit"></i>
                                     </button>
-                                </form>
+
+                                    <form action="{{ route('jadwal.destroy', $j->id) }}" method="POST">
+                                        @csrf @method('DELETE')
+                                        <button class="btn btn-danger btn-sm" onclick="return confirm('Hapus jadwal ini? Data absensi terkait mungkin akan ikut bermasalah.')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
+
+                        <div class="modal fade" id="editModal{{ $j->id }}" tabindex="-1" role="dialog">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <form action="{{ route('jadwal.update', $j->id) }}" method="POST">
+                                        @csrf @method('PUT')
+                                        <div class="modal-header bg-warning text-white">
+                                            <h5 class="modal-title">Edit Jadwal</h5>
+                                            <button class="close text-white" type="button" data-dismiss="modal"><span>×</span></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="form-group">
+                                                <label>Hari</label>
+                                                <select name="hari" class="form-control" required>
+                                                    @foreach(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] as $h)
+                                                        <option value="{{ $h }}" {{ $j->hari == $h ? 'selected' : '' }}>{{ $h }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Jam Mulai</label>
+                                                        <input type="time" name="jam_mulai" class="form-control" value="{{ substr($j->jam_mulai, 0, 5) }}" required>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Jam Selesai</label>
+                                                        <input type="time" name="jam_selesai" class="form-control" value="{{ substr($j->jam_selesai, 0, 5) }}" required>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Rombongan Belajar</label>
+                                                <select name="rombel_id" class="form-control" required>
+                                                    @foreach($rombels as $r)
+                                                        <option value="{{ $r->id }}" {{ $j->rombel_id == $r->id ? 'selected' : '' }}>{{ $r->nama_rombel }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Mata Pelajaran</label>
+                                                <select name="mapel_id" class="form-control" required>
+                                                    @foreach($mapels as $m)
+                                                        <option value="{{ $m->id }}" {{ $j->mapel_id == $m->id ? 'selected' : '' }}>{{ $m->nama_mapel }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Guru Pengampu</label>
+                                                <select name="guru_id" class="form-control" required>
+                                                    @foreach($gurus as $g)
+                                                        <option value="{{ $g->id }}" {{ $j->guru_id == $g->id ? 'selected' : '' }}>{{ $g->nama_guru }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-warning font-weight-bold">Simpan Perubahan</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                         @endforeach
                     </tbody>
                 </table>
@@ -58,14 +139,14 @@
     </div>
 </div>
 
-<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <form action="{{ route('jadwal.store') }}" method="POST">
                 @csrf
-                <div class="modal-header">
+                <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">Tambah Jadwal Baru</h5>
-                    <button class="close" type="button" data-dismiss="modal"><span>×</span></button>
+                    <button class="close text-white" type="button" data-dismiss="modal"><span>×</span></button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
@@ -93,14 +174,16 @@
                     <div class="form-group">
                         <label>Rombongan Belajar</label>
                         <select name="rombel_id" class="form-control" required>
+                            <option value="">-- Pilih Rombel --</option>
                             @foreach($rombels as $r)
-                                <option value="{{ $r->id }}">{{ $r->nama_rombel }} ({{ $r->tahunAjaran->tahun }})</option>
+                                <option value="{{ $r->id }}">{{ $r->nama_rombel }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Mata Pelajaran</label>
                         <select name="mapel_id" class="form-control" required>
+                            <option value="">-- Pilih Mapel --</option>
                             @foreach($mapels as $m)
                                 <option value="{{ $m->id }}">{{ $m->nama_mapel }}</option>
                             @endforeach
@@ -109,6 +192,7 @@
                     <div class="form-group">
                         <label>Guru Pengampu</label>
                         <select name="guru_id" class="form-control" required>
+                            <option value="">-- Pilih Guru --</option>
                             @foreach($gurus as $g)
                                 <option value="{{ $g->id }}">{{ $g->nama_guru }}</option>
                             @endforeach
@@ -116,6 +200,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary">Simpan Jadwal</button>
                 </div>
             </form>
