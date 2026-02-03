@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RombelController;
 use App\Http\Controllers\JadwalController;
 use App\Http\Controllers\AnggotaRombelController;
+use App\Http\Controllers\PresensiController;
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/presensi', [PresensiController::class, 'index'])->name('presensi.index');
+    Route::get('/presensi/scanner', [PresensiController::class, 'scanner'])->name('presensi.scanner');
+    Route::post('/presensi/store', [PresensiController::class, 'store'])->name('presensi.store');
+});
 
 // Dalam group auth
 
@@ -39,6 +46,8 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('rombel', RombelController::class);
     Route::resource('jadwal', JadwalController::class); 
     Route::resource('anggota-rombel', AnggotaRombelController::class)->except(['edit', 'update', 'show']);
+
+
 
      
 });

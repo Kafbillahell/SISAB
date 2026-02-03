@@ -36,12 +36,17 @@
                         @forelse($siswas as $siswa)
                         <tr>
                             <td class="text-center">
-                                @if($siswa->foto)
-                                    <img src="{{ asset('storage/'.$siswa->foto) }}" width="50" class="img-thumbnail">
-                                @else
-                                    <span class="badge badge-secondary">No Photo</span>
-                                @endif
-                            </td>
+    @if($siswa->foto)
+        <div class="position-relative d-inline-block">
+            <img src="{{ asset('storage/'.$siswa->foto) }}" width="50" height="50" class="rounded-circle shadow-sm" style="object-fit: cover;">
+            <span class="badge badge-success position-absolute" style="bottom: -5px; right: -5px; font-size: 0.6rem;">
+                <i class="fas fa-check"></i> Ready
+            </span>
+        </div>
+    @else
+        <span class="badge badge-danger">Wajah Belum Terdaftar</span>
+    @endif
+</td>
                             <td>{{ $siswa->nisn }}</td>
                             <td>{{ $siswa->nama_siswa }}</td>
                             <td>{{ $siswa->jenis_kelamin }}</td>

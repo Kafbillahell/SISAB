@@ -70,14 +70,20 @@
         Absensi & Jadwal
     </div>
 
+    <li class="nav-item {{ request()->is('presensi/scanner*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('presensi.scanner') }}">
+            <i class="fas fa-fw fa-camera"></i>
+            <span>Presensi Wajah</span></a>
+    </li>
+
     <li class="nav-item {{ request()->is('jadwal*') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('jadwal.index') }}">
             <i class="fas fa-fw fa-calendar-alt"></i>
             <span>Jadwal Pelajaran</span></a>
     </li>
 
-    <li class="nav-item">
-        <a class="nav-link" href="#">
+    <li class="nav-item {{ request()->is('presensi') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('presensi.index') }}">
             <i class="fas fa-fw fa-clipboard-check"></i>
             <span>Rekap Absensi</span></a>
     </li>
