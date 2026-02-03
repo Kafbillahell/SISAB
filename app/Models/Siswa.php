@@ -18,6 +18,11 @@ class Siswa extends Model
         'foto'
     ];
 
+    // Otomatis mengubah JSON di DB menjadi Array di PHP
+    protected $casts = [
+        'face_embedding' => 'array',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

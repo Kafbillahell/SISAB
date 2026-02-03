@@ -2,9 +2,18 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Jadwal extends Model
 {
-    //
+    use HasFactory;
+
+    protected $fillable = [
+        'rombel_id', 'mapel_id', 'guru_id', 'hari', 'jam_mulai', 'jam_selesai'
+    ];
+
+    public function rombel() { return $this->belongsTo(Rombel::class); }
+    public function mapel() { return $this->belongsTo(Mapel::class); }
+    public function guru() { return $this->belongsTo(Guru::class); }
 }

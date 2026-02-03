@@ -9,43 +9,35 @@ class KelasController extends Controller
 {
     public function index()
     {
-        $kelas = Kelas::all();
-        return view('admin.kelas.index', compact('kelas'));
+        $kelas = Kelas::orderBy('tingkat', 'asc')->get();
+        return view('kelas.index', compact('kelas'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'nama_kelas' => 'required|string|max:255',
-            'tingkat'    => 'required|in:10,11,12',
-        ], [
-            'nama_kelas.required' => 'Nama kelas wajib diisi.',
-            'tingkat.required'    => 'Tingkat wajib dipilih.',
+            'nama_kelas' => 'required|string|max:50',
+            'tingkat' => 'required|string|max:10',
         ]);
 
         Kelas::create($request->all());
-
-        return back()->with('success', 'Kelas berhasil ditambahkan!');
+        return redirect()->back()->with('success', 'Kelas berhasil ditambahkan.');
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, Kelas $kela) // Laravel otomatis pakai 'kela' untuk singular 'kelas'
     {
         $request->validate([
-            'nama_kelas' => 'required|string|max:255',
-            'tingkat'    => 'required|in:10,11,12',
+            'nama_kelas' => 'required|string|max:50',
+            'tingkat' => 'required|string|max:10',
         ]);
 
-        $kelas = Kelas::findOrFail($id);
-        $kelas->update($request->all());
-
-        return back()->with('success', 'Data kelas berhasil diperbarui!');
+        $kela->update($request->all());
+        return redirect()->back()->with('success', 'Kelas berhasil diupdate.');
     }
 
-    public function destroy($id)
+    public function destroy(Kelas $kela)
     {
-        $kelas = Kelas::findOrFail($id);
-        $kelas->delete();
-
-        return back()->with('success', 'Kelas berhasil dihapus!');
+        $kela->delete();
+        return redirect()->back()->with('success', 'Kelas berhasil dihapus.');
     }
 }

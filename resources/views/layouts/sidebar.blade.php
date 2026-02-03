@@ -28,17 +28,18 @@
     </li>
 
     <li class="nav-item">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseAkademik"
+        <a class="nav-link {{ request()->is('tahun-ajaran*', 'kelas*', 'mapel*', 'rombel*', 'anggota-rombel*') ? '' : 'collapsed' }}" href="#" data-toggle="collapse" data-target="#collapseAkademik"
             aria-expanded="true" aria-controls="collapseAkademik">
             <i class="fas fa-fw fa-graduation-cap"></i>
             <span>Data Akademik</span>
         </a>
-        <div id="collapseAkademik" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
+        <div id="collapseAkademik" class="collapse {{ request()->is('tahun-ajaran*', 'kelas*', 'mapel*', 'rombel*', 'anggota-rombel*') ? 'show' : '' }}" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
             <div class="bg-white py-2 collapse-inner rounded">
-                <a class="collapse-item" href="#">Tahun Ajaran</a>
-                <a class="collapse-item" href="#">Kelas</a>
-                <a class="collapse-item" href="#">Mata Pelajaran</a>
-                <a class="collapse-item" href="#">Rombongan Belajar</a>
+                <a class="collapse-item {{ request()->is('tahun-ajaran*') ? 'active' : '' }}" href="{{ route('tahun-ajaran.index') }}">Tahun Ajaran</a>
+                <a class="collapse-item {{ request()->is('kelas*') ? 'active' : '' }}" href="{{ route('kelas.index') }}">Kelas</a>
+                <a class="collapse-item {{ request()->is('mapel*') ? 'active' : '' }}" href="{{ route('mapel.index') }}">Mata Pelajaran</a>
+                <a class="collapse-item {{ request()->is('rombel*') ? 'active' : '' }}" href="{{ route('rombel.index') }}">Rombongan Belajar</a>
+                <a class="collapse-item {{ request()->is('anggota-rombel*') ? 'active' : '' }}" href="{{ route('anggota-rombel.index') }}">Anggota Rombel</a>
             </div>
         </div>
     </li>
@@ -49,18 +50,19 @@
         Personalia
     </div>
 
-    <li class="nav-item">
-        <a class="nav-link" href="#">
+    <li class="nav-item {{ request()->is('guru*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('guru.index') }}">
             <i class="fas fa-fw fa-chalkboard-teacher"></i>
-            <span>Data Guru</span></a>
+            <span>Data Guru</span>
+        </a>
     </li>
 
     <li class="nav-item {{ request()->is('siswas*') ? 'active' : '' }}">
-    <a class="nav-link" href="{{ route('siswas.index') }}">
-        <i class="fas fa-fw fa-user-graduate"></i>
-        <span>Data Siswa</span>
-    </a>
-</li>
+        <a class="nav-link" href="{{ route('siswas.index') }}">
+            <i class="fas fa-fw fa-user-graduate"></i>
+            <span>Data Siswa</span>
+        </a>
+    </li>
 
     <hr class="sidebar-divider">
 
@@ -68,8 +70,8 @@
         Absensi & Jadwal
     </div>
 
-    <li class="nav-item">
-        <a class="nav-link" href="#">
+    <li class="nav-item {{ request()->is('jadwal*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('jadwal.index') }}">
             <i class="fas fa-fw fa-calendar-alt"></i>
             <span>Jadwal Pelajaran</span></a>
     </li>
