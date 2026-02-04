@@ -139,49 +139,74 @@
     ];
 
     async function initAI() {
-        try {
-            const MODEL_URL = '/models';
-            await Promise.all([
-                faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-            ]);
+    try {
+        const MODEL_URL = '/models';
+        await Promise.all([
+            faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
 
-            result.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sinkronisasi Wajah...';
-            const labeledDescriptors = await loadSiswaDescriptors();
-            
-            if (labeledDescriptors.length === 0) {
-                result.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i> Foto Siswa Belum Ada';
-                return;
-            }
-
-            const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { width: 640, height: 480, facingMode: "user" } 
-            });
-            video.srcObject = stream;
-
-            result.className = "badge badge-success shadow-lg px-4 py-3";
-            result.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Sistem Siap';
-
-            video.addEventListener('play', () => {
-                setInterval(async () => {
-                    if (isProcessing) return;
-                    const detections = await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceDescriptors();
-                    if (detections.length > 0) {
-                        const bestMatch = faceMatcher.findBestMatch(detections[0].descriptor);
-                        if (bestMatch.label !== 'unknown') {
-                            const [nama, id] = bestMatch.label.split('|');
-                            handleAbsensi(id, nama);
-                        }
-                    }
-                }, 1000);
-            });
-        } catch (err) {
-            result.className = "badge badge-danger shadow-lg px-4 py-3";
-            result.innerHTML = '<i class="fas fa-times-circle mr-2"></i> Kamera Tidak Aktif';
+        result.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sinkronisasi Wajah...';
+        const labeledDescriptors = await loadSiswaDescriptors();
+        
+        if (labeledDescriptors.length === 0) {
+            result.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i> Foto Siswa Kelas Ini Kosong';
+            return;
         }
+
+        // AKURASI: Diperketat ke 0.45 (Makin kecil makin sulit tertukar)
+        const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.45); 
+        
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: 640, height: 480, facingMode: "user" } 
+        });
+        video.srcObject = stream;
+
+        result.className = "badge badge-success shadow-lg px-4 py-3";
+        result.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Sistem Siap';
+
+        video.addEventListener('play', () => {
+            setInterval(async () => {
+                if (isProcessing) return;
+
+                // DETEKSI: minConfidence 0.8 agar tidak salah deteksi objek lain
+                const detections = await faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.8 }))
+                    .withFaceLandmarks()
+                    .withFaceDescriptors();
+
+                if (detections.length > 0) {
+                    const bestMatch = faceMatcher.findBestMatch(detections[0].descriptor);
+                    
+                    // Jika label bukan 'unknown' dan jarak kecocokan (distance) di bawah 0.45
+                    if (bestMatch.label !== 'unknown' && bestMatch.distance < 0.45) {
+                        const [nama, id] = bestMatch.label.split('|');
+                        handleAbsensi(id, nama);
+                    } else {
+                        // Jika ada wajah tapi tidak dikenal di rombel ini
+                        showWarning("Wajah Tidak Dikenali / Bukan Anggota Kelas Ini");
+                    }
+                }
+            }, 1000);
+        });
+    } catch (err) {
+        result.innerHTML = '<i class="fas fa-times-circle mr-2"></i> Kamera Error';
     }
+}
+
+// Tambahkan fungsi warning agar user tahu dia ditolak
+function showWarning(pesan) {
+    result.className = "badge badge-danger shadow-lg px-4 py-3";
+    result.innerHTML = `<i class="fas fa-user-slash mr-2"></i> ${pesan}`;
+    scannerWrapper.style.borderColor = "#dc3545";
+    setTimeout(() => {
+        if(!isProcessing) {
+            result.className = "badge badge-primary shadow-lg px-4 py-3";
+            result.innerHTML = '<i class="fas fa-user-shield mr-2"></i> Memindai Wajah...';
+            scannerWrapper.style.borderColor = "#fff";
+        }
+    }, 1500);
+}
 
     async function loadSiswaDescriptors() {
         return Promise.all(

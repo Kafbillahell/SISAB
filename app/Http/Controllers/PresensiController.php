@@ -47,30 +47,36 @@ class PresensiController extends Controller
 }
 
     public function scanner(Request $request)
-    {
-        $now = now()->setTimezone('Asia/Jakarta');
-        $hariIndo = $this->getHariIndo($now->format('l'));
-        $jamSekarang = $now->format('H:i:s');
+{
+    $now = now()->setTimezone('Asia/Jakarta');
+    $hariIndo = $this->getHariIndo($now->format('l'));
+    $jamSekarang = $now->format('H:i:s');
 
-        $allGurus = Guru::all();
-        $targetGuruId = $request->guru_id ?? (auth()->user()->guru_id ?? null);
+    $allGurus = Guru::all();
+    $targetGuruId = $request->guru_id ?? (auth()->user()->guru_id ?? null);
 
-        $queryJadwal = Jadwal::where('hari', $hariIndo)
-            ->whereTime('jam_mulai', '<=', $jamSekarang)
-            ->whereTime('jam_selesai', '>=', $jamSekarang)
-            ->with(['mapel', 'rombel']);
+    $jadwalAktif = Jadwal::where('hari', $hariIndo)
+        ->whereTime('jam_mulai', '<=', $jamSekarang)
+        ->whereTime('jam_selesai', '>=', $jamSekarang)
+        ->with(['mapel', 'rombel'])
+        ->when($targetGuruId, function($q) use ($targetGuruId) {
+            return $q->where('guru_id', $targetGuruId);
+        })
+        ->first();
 
-        if ($targetGuruId) {
-            $queryJadwal->where('guru_id', $targetGuruId);
-        }
+    $daftarSiswa = collect();
 
-        $jadwalAktif = $queryJadwal->first();
-
-        // Gunakan ini karena terbukti tidak error di database kamu
-        $daftarSiswa = Siswa::whereNotNull('foto')->get(['id', 'nama_siswa', 'foto']);
-
-        return view('presensi.scanner', compact('jadwalAktif', 'daftarSiswa', 'allGurus', 'targetGuruId'));
+    // LOGIKA FILTER: Gunakan tabel anggota_rombels
+    if ($jadwalAktif) {
+        $daftarSiswa = \DB::table('anggota_rombels')
+            ->join('siswas', 'anggota_rombels.siswa_id', '=', 'siswas.id')
+            ->where('anggota_rombels.rombel_id', $jadwalAktif->rombel_id)
+            ->whereNotNull('siswas.foto')
+            ->get(['siswas.id', 'siswas.nama_siswa', 'siswas.foto']);
     }
+
+    return view('presensi.scanner', compact('jadwalAktif', 'daftarSiswa', 'allGurus', 'targetGuruId'));
+}
 
     public function store(Request $request)
     {
