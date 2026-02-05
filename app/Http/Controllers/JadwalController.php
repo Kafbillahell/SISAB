@@ -84,4 +84,33 @@ class JadwalController extends Controller
             return redirect()->back()->with('error', 'Terjadi kesalahan sistem saat menghapus data.');
         }
     }
+
+    public function update(Request $request, $id)
+{
+    // 1. Validasi input
+    $request->validate([
+        'hari' => 'required',
+        'jam_mulai' => 'required',
+        'jam_selesai' => 'required',
+        'rombel_id' => 'required',
+        'mapel_id' => 'required',
+        'guru_id' => 'required',
+    ]);
+
+    // 2. Cari data jadwalnya
+    $jadwal = Jadwal::findOrFail($id);
+
+    // 3. Update datanya
+    $jadwal->update([
+        'hari' => $request->hari,
+        'jam_mulai' => $request->jam_mulai,
+        'jam_selesai' => $request->jam_selesai,
+        'rombel_id' => $request->rombel_id,
+        'mapel_id' => $request->mapel_id,
+        'guru_id' => $request->guru_id,
+    ]);
+
+    // 4. Kembali ke halaman jadwal dengan pesan sukses
+    return redirect()->route('jadwal.index')->with('success', 'Jadwal berhasil diperbarui!');
+}
 }
