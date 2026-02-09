@@ -84,12 +84,18 @@ class SiswaController extends Controller
 
     // Hapus data siswa
     public function destroy(Siswa $siswa)
-    {
-        if ($siswa->foto) {
-            Storage::disk('public')->delete($siswa->foto);
-        }
-        
-        $siswa->delete();
-        return redirect()->route('siswas.index')->with('success', 'Data siswa berhasil dihapus.');
+{
+    // 1. Hapus foto dari storage jika ada
+    if ($siswa->foto) {
+        Storage::disk('public')->delete($siswa->foto);
     }
+
+    // 2. Hapus semua data presensi yang terhubung dengan siswa ini
+    $siswa->presensis()->delete(); // Pastikan relasi 'presensis' sudah ada di Model Siswa
+
+    // 3. Baru hapus siswanya
+    $siswa->delete();
+
+    return redirect()->route('siswas.index')->with('success', 'Data siswa dan riwayat presensi berhasil dihapus.');
+}
 }
