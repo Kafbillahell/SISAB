@@ -70,11 +70,20 @@
                     {{-- PANEL KANAN: SCANNER AREA --}}
                     <div class="col-lg-8 bg-light p-4 p-md-5">
                         @php
-                            // Syarat Scanner Muncul: 
-                            // 1. Ada jadwal aktif
-                            // 2. Jika admin, HARUS sudah pilih guru
-                            $bolehScan = ($jadwalAktif && (auth()->user()->role !== 'admin' || $targetGuruId));
-                        @endphp
+    $user = auth()->user();
+    $bolehScan = false;
+
+    if($jadwalAktif) {
+        // Admin (ID 1) boleh akses jika sudah pilih guru
+        if($user->role == 'admin' || $user->id == 1) {
+            $bolehScan = !empty($targetGuruId);
+        } 
+        // Guru boleh akses jika user_id di tabel gurus cocok dengan ID user login
+        else {
+            $bolehScan = ($jadwalAktif->guru && $jadwalAktif->guru->user_id == $user->id);
+        }
+    }
+@endphp
 
                         @if($bolehScan)
                             <div class="scanner-container position-relative mx-auto shadow-lg bg-black rounded-xl overflow-hidden" style="max-width: 600px; border-radius: 30px; border: 8px solid #fff; transition: all 0.3s ease;" id="scannerWrapper">
@@ -92,18 +101,23 @@
                                 </div>
                             </div>
                         @else
-                            <div class="text-center py-5">
-                                <img src="https://illustrations.popsy.co/white/calendar.svg" style="width: 200px;" class="mb-4">
-                                @if(auth()->user()->role == 'admin' && !$targetGuruId)
-                                    <h4 class="text-primary font-weight-bold">Mode Admin: Standby</h4>
-                                    <p class="text-secondary">Silakan pilih <strong>Identitas Guru</strong> pada panel kiri<br>untuk membuka akses scanner.</p>
-                                    <i class="fas fa-arrow-left fa-2x text-primary mt-3 animate-bounce-left"></i>
-                                @else
-                                    <h4 class="text-muted">Scanner Tidak Tersedia</h4>
-                                    <p class="text-secondary">Tidak ditemukan jadwal aktif untuk saat ini.</p>
-                                @endif
-                            </div>
-                        @endif
+    <div class="text-center py-5">
+        <img src="https://illustrations.popsy.co/white/calendar.svg" style="width: 200px;" class="mb-4">
+        
+        @if(auth()->user()->role == 'admin' && !$targetGuruId)
+            <h4 class="text-primary font-weight-bold">Mode Admin: Standby</h4>
+            <p class="text-secondary">Silakan pilih <strong>Identitas Guru</strong> pada panel kiri<br>untuk membuka akses scanner.</p>
+            <i class="fas fa-arrow-left fa-2x text-primary mt-3 animate-bounce-left"></i>
+        @elseif($jadwalAktif && auth()->user()->role != 'admin' && auth()->user()->guru_id != $jadwalAktif->guru_id)
+            {{-- Kasus jika jadwal ditemukan tapi bukan milik guru yang login --}}
+            <h4 class="text-danger font-weight-bold">Akses Ditolak</h4>
+            <p class="text-secondary">Jadwal yang sedang berlangsung bukan milik akun Anda.</p>
+        @else
+            <h4 class="text-muted">Scanner Tidak Tersedia</h4>
+            <p class="text-secondary">Tidak ditemukan jadwal mengajar Anda yang aktif saat ini.</p>
+        @endif
+    </div>
+@endif
                     </div>
                 </div>
             </div>

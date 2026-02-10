@@ -106,25 +106,42 @@ class PresensiController extends Controller
 
     public function scanner(Request $request)
 {
-    $now = now()->setTimezone('Asia/Jakarta');
+    // 1. Ambil Waktu & Hari Real-time
+    $now = \Carbon\Carbon::now()->setTimezone('Asia/Jakarta');
     $hariIndo = $this->getHariIndo($now->format('l'));
     $jamSekarang = $now->format('H:i:s');
 
-    $allGurus = Guru::all();
-    $targetGuruId = $request->guru_id ?? (auth()->user()->guru_id ?? null);
+    $allGurus = \App\Models\Guru::all();
+    $user = auth()->user();
+    $targetGuruId = null;
 
-    $jadwalAktif = Jadwal::where('hari', $hariIndo)
-        ->whereTime('jam_mulai', '<=', $jamSekarang)
-        ->whereTime('jam_selesai', '>=', $jamSekarang)
-        ->with(['mapel', 'rombel'])
-        ->when($targetGuruId, function($q) use ($targetGuruId) {
-            return $q->where('guru_id', $targetGuruId);
-        })
-        ->first();
+    // 2. Logika Penentuan Guru
+    if ($user->role == 'admin' || $user->role == 'siswa') { 
+        // Admin bisa pilih guru lewat dropdown
+        // Note: Di tabel Anda, admin@smkn1... role-nya tertulis 'siswa', 
+        // jadi saya tambahkan pengecekan tersebut.
+        $targetGuruId = $request->guru_id;
+    } else {
+        // Jika Guru login, cari record di tabel gurus yang user_id nya sesuai dengan id user ini
+        $guru = \App\Models\Guru::where('user_id', $user->id)->first();
+        if ($guru) {
+            $targetGuruId = $guru->id;
+        }
+    }
 
+    // 3. Cari Jadwal Berdasarkan targetGuruId
+    $jadwalAktif = null;
+    if ($targetGuruId) {
+        $jadwalAktif = \App\Models\Jadwal::where('guru_id', $targetGuruId)
+            ->where('hari', $hariIndo)
+            ->whereTime('jam_mulai', '<=', $jamSekarang)
+            ->whereTime('jam_selesai', '>=', $jamSekarang)
+            ->with(['mapel', 'rombel', 'guru'])
+            ->first();
+    }
+
+    // 4. Ambil Daftar Siswa jika jadwal ketemu
     $daftarSiswa = collect();
-
-    // LOGIKA FILTER: Gunakan tabel anggota_rombels
     if ($jadwalAktif) {
         $daftarSiswa = \DB::table('anggota_rombels')
             ->join('siswas', 'anggota_rombels.siswa_id', '=', 'siswas.id')
@@ -133,7 +150,12 @@ class PresensiController extends Controller
             ->get(['siswas.id', 'siswas.nama_siswa', 'siswas.foto']);
     }
 
-    return view('presensi.scanner', compact('jadwalAktif', 'daftarSiswa', 'allGurus', 'targetGuruId'));
+    return view('presensi.scanner', [
+        'jadwalAktif' => $jadwalAktif,
+        'daftarSiswa' => $daftarSiswa,
+        'allGurus' => $allGurus,
+        'targetGuruId' => $targetGuruId
+    ]);
 }
 
     public function store(Request $request)
