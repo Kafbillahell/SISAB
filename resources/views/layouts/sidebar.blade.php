@@ -28,21 +28,28 @@
     </li>
 
     <li class="nav-item">
-        <a class="nav-link {{ request()->is('tahun-ajaran*', 'kelas*', 'mapel*', 'rombel*', 'anggota-rombel*') ? '' : 'collapsed' }}" href="#" data-toggle="collapse" data-target="#collapseAkademik"
-            aria-expanded="true" aria-controls="collapseAkademik">
-            <i class="fas fa-fw fa-graduation-cap"></i>
-            <span>Data Akademik</span>
-        </a>
-        <div id="collapseAkademik" class="collapse {{ request()->is('tahun-ajaran*', 'kelas*', 'mapel*', 'rombel*', 'anggota-rombel*') ? 'show' : '' }}" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
-            <div class="bg-white py-2 collapse-inner rounded">
-                <a class="collapse-item {{ request()->is('tahun-ajaran*') ? 'active' : '' }}" href="{{ route('tahun-ajaran.index') }}">Tahun Ajaran</a>
-                <a class="collapse-item {{ request()->is('kelas*') ? 'active' : '' }}" href="{{ route('kelas.index') }}">Kelas</a>
-                <a class="collapse-item {{ request()->is('mapel*') ? 'active' : '' }}" href="{{ route('mapel.index') }}">Mata Pelajaran</a>
-                <a class="collapse-item {{ request()->is('rombel*') ? 'active' : '' }}" href="{{ route('rombel.index') }}">Rombongan Belajar</a>
-                <a class="collapse-item {{ request()->is('anggota-rombel*') ? 'active' : '' }}" href="{{ route('anggota-rombel.index') }}">Anggota Rombel</a>
-            </div>
+    <a class="nav-link {{ request()->is('tahun-ajaran*', 'jurusan*', 'kelas*', 'mapel*', 'rombel*', 'anggota-rombel*', 'sesi*') ? '' : 'collapsed' }}" href="#" data-toggle="collapse" data-target="#collapseAkademik"
+        aria-expanded="true" aria-controls="collapseAkademik">
+        <i class="fas fa-fw fa-graduation-cap"></i>
+        <span>Data Akademik</span>
+    </a>
+    
+    <div id="collapseAkademik" class="collapse {{ request()->is('tahun-ajaran*', 'jurusan*', 'kelas*', 'mapel*', 'rombel*', 'anggota-rombel*', 'sesi*') ? 'show' : '' }}" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
+        <div class="bg-white py-2 collapse-inner rounded">
+            <a class="collapse-item {{ request()->is('tahun-ajaran*') ? 'active' : '' }}" href="{{ route('tahun-ajaran.index') }}">Tahun Ajaran</a>
+            
+            <a class="collapse-item {{ request()->is('jurusan*') ? 'active' : '' }}" href="{{ route('jurusan.index') }}">Jurusan</a>
+            
+            <a class="collapse-item {{ request()->is('kelas*') ? 'active' : '' }}" href="{{ route('kelas.index') }}">Kelas</a>
+
+            <a class="collapse-item {{ request()->is('sesi*') ? 'active' : '' }}" href="{{ route('sesi.index') }}">Modul Waktu</a>
+
+            <a class="collapse-item {{ request()->is('mapel*') ? 'active' : '' }}" href="{{ route('mapel.index') }}">Mata Pelajaran</a>
+            <a class="collapse-item {{ request()->is('rombel*') ? 'active' : '' }}" href="{{ route('rombel.index') }}">Rombongan Belajar</a>
+            <a class="collapse-item {{ request()->is('anggota-rombel*') ? 'active' : '' }}" href="{{ route('anggota-rombel.index') }}">Anggota Rombel</a>
         </div>
-    </li>
+    </div>
+</li>
 
     <hr class="sidebar-divider">
 
