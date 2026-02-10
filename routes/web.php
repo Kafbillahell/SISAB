@@ -17,6 +17,8 @@ use App\Http\Controllers\{
     SesiController
 };
 
+
+
 // --- Rute API AJAX (Bisa diakses login/tidak sesuai kebutuhan) ---
 Route::get('/siswas/search-api/{nisn}', [SiswaController::class, 'searchByNisn'])->name('siswas.searchApi');
 
@@ -24,6 +26,19 @@ Route::get('/siswas/search-api/{nisn}', [SiswaController::class, 'searchByNisn']
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
+});
+
+Route::middleware(['auth'])->group(function () {
+    // Route Khusus Guru
+    Route::get('/guru/refresh', function() {
+        \Illuminate\Support\Facades\Cache::forget('data_guru_api_2025');
+        return redirect()->route('guru.index')->with('success', 'Data Cloud diperbarui!');
+    })->name('guru.refresh');
+
+    Route::get('/guru/sync/{nip}', [GuruController::class, 'sync'])->name('guru.sync');
+    Route::resource('guru', GuruController::class);
+    
+    // ... rute lainnya
 });
 
 // --- Route Authenticated (Sudah Login) ---
