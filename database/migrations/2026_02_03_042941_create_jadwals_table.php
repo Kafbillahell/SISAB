@@ -16,6 +16,10 @@ return new class extends Migration
         $table->foreignId('rombel_id')->constrained('rombels');
         $table->foreignId('mapel_id')->constrained('mapels');
         $table->foreignId('guru_id')->constrained('gurus');
+        
+        // TAMBAHKAN INI: Menghubungkan ke tabel sesis
+        $table->foreignId('sesi_id')->constrained('sesis'); 
+
         $table->enum('hari', ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']);
         $table->time('jam_mulai');
         $table->time('jam_selesai');

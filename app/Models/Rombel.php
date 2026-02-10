@@ -22,4 +22,15 @@ class Rombel extends Model
     public function tahunAjaran() {
         return $this->belongsTo(TahunAjaran::class);
     }
+
+    public function siswas()
+{
+    // 'id_rombel' adalah nama kolom di tabel siswas yang menyambung ke rombel
+    return $this->hasMany(Siswa::class, 'id_rombel'); 
+}
+
+    public function jurusan()
+{
+    return $this->belongsTo(Jurusan::class, 'jurusan_id');
+}
 }

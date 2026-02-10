@@ -13,9 +13,14 @@ return new class extends Migration
 {
     Schema::create('kelas', function (Blueprint $table) {
         $table->id();
-        $table->string('nama_kelas'); // Contoh: X, XI, XII
         $table->string('tingkat'); // Contoh: 10, 11, 12
+        $table->string('nama_kelas'); // Contoh: RPL 1, TKJ 2
+        // Tambahkan baris di bawah ini:
+        $table->unsignedBigInteger('jurusan_id'); 
         $table->timestamps();
+
+        // Tambahkan relasi foreign key
+        $table->foreign('jurusan_id')->references('id')->on('jurusans')->onDelete('cascade');
     });
 }
 

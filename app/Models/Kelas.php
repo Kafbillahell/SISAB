@@ -9,5 +9,19 @@ class Kelas extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nama_kelas', 'tingkat'];
+    // Pastikan jurusan_id sudah ada di fillable
+    protected $fillable = [
+        'nama_kelas',
+        'tingkat',
+        'jurusan_id', // Tambahkan ini jika belum ada
+    ];
+
+    /**
+     * Relasi ke model Jurusan
+     */
+    public function jurusan()
+    {
+        // Kelas "belongsTo" (milik) satu Jurusan
+        return $this->belongsTo(Jurusan::class, 'jurusan_id');
+    }
 }

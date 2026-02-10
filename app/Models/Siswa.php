@@ -27,4 +27,10 @@ class Siswa extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function presensis()
+{
+    // Ini memberitahu Laravel bahwa satu Siswa memiliki banyak data di tabel Presensi
+    return $this->hasMany(Presensi::class, 'siswa_id');
+}
 }
