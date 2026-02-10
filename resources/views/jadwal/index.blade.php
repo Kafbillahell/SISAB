@@ -10,7 +10,7 @@
         </button>
     </div>
 
-    {{-- Alert Success --}}
+    {{-- Alert --}}
     @if(session('success'))
         <div class="alert alert-success shadow alert-dismissible fade show" role="alert">
             {{ session('success') }}
@@ -18,14 +18,18 @@
         </div>
     @endif
 
-    {{-- STEP 1: PILIH KELAS (ROMBEL) - Tetap sama seperti kode Anda --}}
+    @if(session('error'))
+        <div class="alert alert-danger shadow alert-dismissible fade show" role="alert">
+            {{ session('error') }}
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+        </div>
+    @endif
+
+    {{-- STEP 1: PILIH KELAS --}}
     <div id="view-kelas">
-        {{-- ... (Gunakan kode filter tingkat & jurusan yang sudah Anda miliki) ... --}}
-        {{-- Pastikan pada tombol 'Atur Jadwal' memanggil showHari(id, nama) --}}
         <div class="row" id="container-rombel">
             @foreach($rombels as $r)
-                {{-- Logika deteksi tingkat & jurusan Anda di sini --}}
-                <div class="col-xl-3 col-md-4 mb-4 class-card-item" data-tingkat="10" data-jurusan="IPA">
+                <div class="col-xl-3 col-md-4 mb-4">
                     <div class="card border-left-primary shadow h-100 py-2">
                         <div class="card-body">
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $r->nama_rombel }}</div>
@@ -39,7 +43,7 @@
         </div>
     </div>
 
-    {{-- STEP 2: GRID JADWAL BERDASARKAN SESI --}}
+    {{-- STEP 2: GRID JADWAL --}}
     <div id="view-hari" style="display: none;">
         <div class="alert alert-info shadow-sm d-flex justify-content-between align-items-center border-0 bg-white" style="border-left: 4px solid #4e73df !important;">
             <span class="text-dark">Mengatur Jadwal: <strong id="selected-kelas-name" class="text-primary"></strong></span>
@@ -72,9 +76,10 @@
                                                 <div class="py-3 text-muted small font-italic">--- ISTIRAHAT ---</div>
                                             @else
                                                 <div id="cell-{{ $hari }}-{{ str_replace(':', '', substr($s->jam_mulai, 0, 5)) }}" 
-     class="slot-cell p-2 border rounded"
-     onclick="openQuickAdd('{{ $hari }}', '{{ $s->jam_mulai }}', '{{ $s->jam_selesai }}', '{{ $s->id }}')"> <i class="fas fa-plus-circle text-gray-200 fa-lg"></i>
-</div>
+                                                     class="slot-cell p-2 border rounded"
+                                                     onclick="openQuickAdd('{{ $hari }}', '{{ $s->jam_mulai }}', '{{ $s->jam_selesai }}', '{{ $s->id }}')"> 
+                                                     <i class="fas fa-plus-circle text-gray-200 fa-lg"></i>
+                                                </div>
                                             @endif
                                         </td>
                                     @endforeach
@@ -88,7 +93,7 @@
     </div>
 </div>
 
-{{-- MODAL TAMBAH (Modifikasi: Jam terisi otomatis) --}}
+{{-- MODAL TAMBAH --}}
 <div class="modal fade" id="addModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -100,7 +105,8 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="rombel_id" id="modal-rombel-id">
-                    <input type="hidden" name="sesi_id" id="modal-sesi-id"> <div class="row">
+                    <input type="hidden" name="sesi_id" id="modal-sesi-id"> 
+                    <div class="row">
                         <div class="col-md-6">
                             <label>Hari</label>
                             <input type="text" name="hari" id="modal-hari" class="form-control bg-light" readonly>
@@ -114,6 +120,7 @@
                     <div class="form-group mt-3">
                         <label>Mata Pelajaran</label>
                         <select name="mapel_id" class="form-control" required>
+                            <option value="">-- Pilih Mapel --</option>
                             @foreach($mapels as $m)
                                 <option value="{{ $m->id }}">{{ $m->nama_mapel }}</option>
                             @endforeach
@@ -123,6 +130,7 @@
                     <div class="form-group">
                         <label>Guru</label>
                         <select name="guru_id" class="form-control" required>
+                            <option value="">-- Pilih Guru --</option>
                             @foreach($gurus as $g)
                                 <option value="{{ $g->id }}">{{ $g->nama_guru }}</option>
                             @endforeach
@@ -138,34 +146,26 @@
 </div>
 
 <style>
-    .slot-cell {
-        min-height: 85px;
-        background: #fff;
-        transition: all 0.2s;
-        border: 1px dashed #e3e6f0 !important;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-    }
+    .slot-cell { min-height: 85px; background: #fff; transition: all 0.2s; border: 1px dashed #e3e6f0 !important; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
     .slot-cell:hover { background: #f8f9fc; border-color: #4e73df !important; }
-    .slot-filled {
-        background: #ffffff !important;
-        border: 1px solid #4e73df !important;
-        border-left: 4px solid #4e73df !important;
-        align-items: flex-start;
-        padding: 10px !important;
-        cursor: default;
-    }
+    .slot-filled { background: #ffffff !important; border: 1px solid #4e73df !important; border-left: 4px solid #4e73df !important; align-items: flex-start; padding: 10px !important; cursor: default; }
     .btn-delete-slot { opacity: 0; transition: 0.2s; }
     .slot-filled:hover .btn-delete-slot { opacity: 1; }
 </style>
 
 <script>
-    // Ambil data dari Laravel
+    // 1. Data dari Laravel
     const allJadwals = @json($jadwals);
+    const sessionOpenRombelId = "{{ session('open_rombel') }}";
     
+    // PENTING: Map ID ke Nama agar JS bisa buka otomatis
+    const rombelMap = {
+        @foreach($rombels as $r)
+            "{{ $r->id }}": "{{ $r->nama_rombel }}",
+        @endforeach
+    };
+
+    // 2. Fungsi Utama
     function showHari(rombelId, rombelNama) {
         document.getElementById('view-kelas').style.display = 'none';
         document.getElementById('view-hari').style.display = 'block';
@@ -175,31 +175,27 @@
     }
 
     function renderJadwal(rombelId) {
-        // 1. Reset semua cell ke keadaan kosong (tombol Plus)
+        // Reset semua cell
         document.querySelectorAll('.slot-cell').forEach(cell => {
             cell.classList.remove('slot-filled');
             cell.innerHTML = '<i class="fas fa-plus-circle text-gray-200 fa-lg"></i>';
-            
-            // Ambil kembali data atribut dari elemen untuk memulihkan fungsi klik
-            // Kami tidak mengubah cell.onclick di sini agar tetap mengarah ke openQuickAdd asli
+            cell.style.pointerEvents = 'auto'; 
         });
 
-        // 2. Filter jadwal berdasarkan rombel yang dipilih
+        // Filter dan Tampilkan
         const filtered = allJadwals.filter(j => j.rombel_id == rombelId);
         
         filtered.forEach(j => {
-            // Format jam harus HHMM (contoh 07:10 menjadi 0710)
             const jamKey = j.jam_mulai.substring(0, 5).replace(':', '');
             const cellId = `cell-${j.hari}-${jamKey}`;
             const container = document.getElementById(cellId);
 
             if (container) {
                 container.classList.add('slot-filled');
-                // Nonaktifkan klik modal tambah jika sudah ada isinya
-                container.setAttribute('onclick', ''); 
+                container.style.pointerEvents = 'none'; // Matikan klik pada cell yang penuh
                 
                 container.innerHTML = `
-                    <div class="position-relative w-100 text-left">
+                    <div class="position-relative w-100 text-left" style="pointer-events: auto;">
                         <div class="font-weight-bold text-primary mb-1" style="font-size: 0.8rem; line-height: 1.2;">
                             ${j.mapel ? j.mapel.nama_mapel : 'Mapel Terhapus'}
                         </div>
@@ -220,18 +216,11 @@
 
     function openQuickAdd(hari, jamMulai, jamSelesai, sesiId) {
         const rombelId = document.getElementById('modal-rombel-id').value;
-        
-        if(!rombelId) {
-            alert("Silakan pilih kelas terlebih dahulu!");
-            return;
-        }
+        if(!rombelId) return;
 
-        // Isi field di dalam modal
         document.getElementById('modal-hari').value = hari;
         document.getElementById('modal-sesi-id').value = sesiId;
         document.getElementById('modal-waktu-label').value = jamMulai.substring(0, 5) + ' - ' + jamSelesai.substring(0, 5);
-        
-        // Tampilkan modal
         $('#addModal').modal('show');
     }
 
@@ -240,6 +229,13 @@
         document.getElementById('view-hari').style.display = 'none';
     }
 
-    function resetView() { window.location.reload(); }
+    function resetView() { window.location.href = "{{ route('jadwal.index') }}"; }
+
+    // --- LOGIKA AUTO-OPEN SAAT REFRESH ---
+    window.addEventListener('load', function() {
+        if (sessionOpenRombelId && rombelMap[sessionOpenRombelId]) {
+            showHari(sessionOpenRombelId, rombelMap[sessionOpenRombelId]);
+        }
+    });
 </script>
 @endsection

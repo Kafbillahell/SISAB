@@ -32,7 +32,7 @@ class GuruSeeder extends Seeder
             $user = User::create([
                 'name' => $g['nama'],
                 'email' => strtolower(str_replace([' ', ',', '.'], '', $g['nama'])) . '@smkn1cianjur.sch.id',
-                'password' => Hash::make('password123'),
+                'password' => Hash::make('guru123'),
                 'role' => 'guru', // Pastikan kolom role ada di migration users Anda
             ]);
 

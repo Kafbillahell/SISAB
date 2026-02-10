@@ -13,24 +13,21 @@ use Illuminate\Http\Request;
 class JadwalController extends Controller
 {
     public function index() 
-{
-    $rombels = Rombel::with('jurusan', 'kelas')->get();
-    $jurusans = Jurusan::all();
-    $mapels = Mapel::all();
-    $gurus = Guru::all();
-    
-    // Ambil jadwal dengan relasi
-    $jadwals = Jadwal::with(['mapel', 'guru', 'rombel', 'sesi'])->get();
+    {
+        $rombels = Rombel::with('jurusan', 'kelas')->get();
+        $jurusans = Jurusan::all();
+        $mapels = Mapel::all();
+        $gurus = Guru::all();
+        
+        // Mengambil data terbaru dari database
+        $jadwals = Jadwal::with(['mapel', 'guru', 'rombel', 'sesi'])->get();
+        $sesis = Sesi::orderBy('urutan', 'asc')->get(); 
 
-    // PERBAIKAN: Jangan pakai orderBy('hari') karena kolom hari sudah dihapus dari tabel sesis
-    $sesis = Sesi::orderBy('urutan', 'asc')->get(); 
-
-    return view('jadwal.index', compact('rombels', 'jurusans', 'mapels', 'gurus', 'jadwals', 'sesis'));
-}
+        return view('jadwal.index', compact('rombels', 'jurusans', 'mapels', 'gurus', 'jadwals', 'sesis'));
+    }
 
     public function store(Request $request)
     {
-        // PERBAIKAN: Gunakan sesi_id, bukan jam manual
         $request->validate([
             'rombel_id' => 'required|exists:rombels,id',
             'mapel_id'  => 'required|exists:mapels,id',
@@ -39,77 +36,60 @@ class JadwalController extends Controller
             'hari'      => 'required',
         ]);
 
-        // Ambil data sesi untuk validasi bentrok jam
         $sesiDipilih = Sesi::find($request->sesi_id);
 
-        // 1. Cek apakah di Rombel tersebut pada Sesi tersebut sudah ada mapel
+        // Cek bentrok Rombel
         $cekSlot = Jadwal::where('rombel_id', $request->rombel_id)
             ->where('sesi_id', $request->sesi_id)
             ->where('hari', $request->hari)
             ->first();
 
         if ($cekSlot) {
-            return back()->with('error', "Gagal! Rombel ini sudah memiliki jadwal di sesi tersebut.");
+            return redirect()->route('jadwal.index')
+                ->with(['error' => "Gagal! Rombel sudah memiliki jadwal di sesi tersebut.", 'open_rombel' => $request->rombel_id]);
         }
 
-        // 2. Cek apakah Guru sedang mengajar di tempat lain pada jam yang sama
+        // Cek bentrok Guru
         $bentrokGuru = Jadwal::where('hari', $request->hari)
             ->where('guru_id', $request->guru_id)
             ->where('sesi_id', $request->sesi_id)
             ->first();
 
         if ($bentrokGuru) {
-            return back()->with('error', "Gagal! Guru ini sudah terjadwal di kelas lain pada jam yang sama.");
+            return redirect()->route('jadwal.index')
+                ->with(['error' => "Gagal! Guru sudah terjadwal di kelas lain.", 'open_rombel' => $request->rombel_id]);
         }
 
-        // Simpan data
         Jadwal::create([
             'rombel_id' => $request->rombel_id,
             'mapel_id'  => $request->mapel_id,
             'guru_id'   => $request->guru_id,
             'sesi_id'   => $request->sesi_id,
             'hari'      => $request->hari,
-            // Jika database Anda masih butuh kolom jam_mulai/selesai, ambil dari $sesiDipilih
             'jam_mulai' => $sesiDipilih->jam_mulai,
             'jam_selesai' => $sesiDipilih->jam_selesai,
         ]);
 
-        return redirect()->back()->with('success', 'Jadwal berhasil disimpan.');
-    }
-
-    public function update(Request $request, $id)
-    {
-        $request->validate([
-            'hari'      => 'required',
-            'sesi_id'   => 'required|exists:sesis,id',
-            'rombel_id' => 'required',
-            'mapel_id'  => 'required',
-            'guru_id'   => 'required',
+        // PENTING: Redirect ke Index (bukan back) agar query data terulang, 
+        // dan bawa ID rombel di session agar JS otomatis membuka kelas tersebut
+        return redirect()->route('jadwal.index')->with([
+            'success' => 'Jadwal berhasil disimpan.',
+            'open_rombel' => $request->rombel_id
         ]);
-
-        $sesi = Sesi::find($request->sesi_id);
-        $jadwal = Jadwal::findOrFail($id);
-
-        $jadwal->update([
-            'hari'        => $request->hari,
-            'sesi_id'     => $request->sesi_id,
-            'jam_mulai'   => $sesi->jam_mulai,
-            'jam_selesai' => $sesi->jam_selesai,
-            'rombel_id'   => $request->rombel_id,
-            'mapel_id'    => $request->mapel_id,
-            'guru_id'     => $request->guru_id,
-        ]);
-
-        return redirect()->route('jadwal.index')->with('success', 'Jadwal berhasil diperbarui!');
     }
 
     public function destroy(Jadwal $jadwal)
     {
         try {
+            $rombelId = $jadwal->rombel_id; // Simpan ID sebelum dihapus
             $jadwal->delete();
-            return redirect()->back()->with('success', 'Jadwal berhasil dihapus.');
+            
+            return redirect()->route('jadwal.index')->with([
+                'success' => 'Jadwal berhasil dihapus.',
+                'open_rombel' => $rombelId
+            ]);
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal menghapus! Data ini mungkin terhubung dengan presensi.');
+            return redirect()->route('jadwal.index')->with('error', 'Gagal menghapus data.');
         }
     }
 }
