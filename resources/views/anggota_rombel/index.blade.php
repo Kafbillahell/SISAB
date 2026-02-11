@@ -72,9 +72,11 @@
                         <div class="form-group">
                             <label>Pilih Siswa (Bisa banyak sekaligus):</label>
                             <select name="siswa_id[]" class="form-control" multiple style="height: 300px;" required>
-                                @foreach($siswas as $s)
-                                    <option value="{{ $s->id }}">{{ $s->nisn }} - {{ $s->nama_siswa }}</option>
-                                @endforeach
+                                @forelse($siswas as $s)
+    <option value="{{ $s->id }}">{{ $s->nama_siswa }}</option>
+@empty
+    <option value="" disabled>Semua siswa sudah memiliki rombel</option>
+@endforelse
                             </select>
                             <small class="form-text text-muted">Tahan Ctrl untuk memilih lebih dari satu.</small>
                         </div>

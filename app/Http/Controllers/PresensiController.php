@@ -114,35 +114,62 @@ class PresensiController extends Controller
     $allGurus = \App\Models\Guru::all();
     $user = auth()->user();
     $targetGuruId = null;
+    $jadwalAktif = null;
 
-    // 2. Logika Penentuan Guru
-    if ($user->role == 'admin' || $user->role == 'siswa') { 
-        // Admin bisa pilih guru lewat dropdown
-        // Note: Di tabel Anda, admin@smkn1... role-nya tertulis 'siswa', 
-        // jadi saya tambahkan pengecekan tersebut.
+    // 2. LOGIKA PENENTUAN JADWAL
+    if ($user->role == 'admin') { 
         $targetGuruId = $request->guru_id;
-    } else {
-        // Jika Guru login, cari record di tabel gurus yang user_id nya sesuai dengan id user ini
+        if ($targetGuruId) {
+            $jadwalAktif = \App\Models\Jadwal::where('guru_id', $targetGuruId)
+                ->where('hari', $hariIndo)
+                ->whereTime('jam_mulai', '<=', $jamSekarang)
+                ->whereTime('jam_selesai', '>=', $jamSekarang)
+                ->first();
+        }
+    } 
+    elseif ($user->role == 'siswa') {
+        // JIKA SISWA LOGIN: Cari rombel siswa ini
+        $siswa = \App\Models\Siswa::where('user_id', $user->id)->first();
+        
+        if ($siswa) {
+            // Cari rombel tempat siswa ini bernaung
+            $anggotaRombel = \DB::table('anggota_rombels')
+                ->where('siswa_id', $siswa->id)
+                ->first();
+
+            if ($anggotaRombel) {
+                // Cari jadwal yang sedang jalan di rombel siswa tersebut
+                $jadwalAktif = \App\Models\Jadwal::where('rombel_id', $anggotaRombel->rombel_id)
+                    ->where('hari', $hariIndo)
+                    ->whereTime('jam_mulai', '<=', $jamSekarang)
+                    ->whereTime('jam_selesai', '>=', $jamSekarang)
+                    ->first();
+                
+                if ($jadwalAktif) {
+                    $targetGuruId = $jadwalAktif->guru_id;
+                }
+            }
+        }
+    } 
+    else {
+        // JIKA GURU LOGIN
         $guru = \App\Models\Guru::where('user_id', $user->id)->first();
         if ($guru) {
             $targetGuruId = $guru->id;
+            $jadwalAktif = \App\Models\Jadwal::where('guru_id', $targetGuruId)
+                ->where('hari', $hariIndo)
+                ->whereTime('jam_mulai', '<=', $jamSekarang)
+                ->whereTime('jam_selesai', '>=', $jamSekarang)
+                ->first();
         }
     }
 
-    // 3. Cari Jadwal Berdasarkan targetGuruId
-    $jadwalAktif = null;
-    if ($targetGuruId) {
-        $jadwalAktif = \App\Models\Jadwal::where('guru_id', $targetGuruId)
-            ->where('hari', $hariIndo)
-            ->whereTime('jam_mulai', '<=', $jamSekarang)
-            ->whereTime('jam_selesai', '>=', $jamSekarang)
-            ->with(['mapel', 'rombel', 'guru'])
-            ->first();
-    }
-
-    // 4. Ambil Daftar Siswa jika jadwal ketemu
+    // 3. Ambil Daftar Siswa jika jadwal ketemu
     $daftarSiswa = collect();
     if ($jadwalAktif) {
+        // Load relasi agar di view tidak error saat panggil $jadwalAktif->guru->nama_guru
+        $jadwalAktif->load(['mapel', 'rombel', 'guru']);
+
         $daftarSiswa = \DB::table('anggota_rombels')
             ->join('siswas', 'anggota_rombels.siswa_id', '=', 'siswas.id')
             ->where('anggota_rombels.rombel_id', $jadwalAktif->rombel_id)

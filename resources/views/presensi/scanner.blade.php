@@ -49,6 +49,10 @@
                                 </div>
                             </div>
                         </div>
+                        {{-- Tambahan: Auto refresh jika jam pelajaran habis --}}
+                        <div class="mt-3 small text-center text-white-50">
+                            <i class="fas fa-sync-alt fa-spin mr-1"></i> Scanner mengikuti jadwal aktif secara real-time.
+                        </div>
                         @else
                         <div class="alert alert-warning border-0 shadow-sm text-dark">
                             <i class="fas fa-calendar-times mr-2"></i> 
@@ -74,12 +78,13 @@
     $bolehScan = false;
 
     if($jadwalAktif) {
-        // Admin (ID 1) boleh akses jika sudah pilih guru
-        if($user->role == 'admin' || $user->id == 1) {
+        if($user->role == 'admin') {
             $bolehScan = !empty($targetGuruId);
-        } 
-        // Guru boleh akses jika user_id di tabel gurus cocok dengan ID user login
-        else {
+        } elseif($user->role == 'siswa') {
+            // Siswa boleh scan jika jadwal untuk rombelnya sedang aktif
+            $bolehScan = true; 
+        } else {
+            // Guru login
             $bolehScan = ($jadwalAktif->guru && $jadwalAktif->guru->user_id == $user->id);
         }
     }
@@ -101,23 +106,17 @@
                                 </div>
                             </div>
                         @else
-    <div class="text-center py-5">
-        <img src="https://illustrations.popsy.co/white/calendar.svg" style="width: 200px;" class="mb-4">
-        
-        @if(auth()->user()->role == 'admin' && !$targetGuruId)
-            <h4 class="text-primary font-weight-bold">Mode Admin: Standby</h4>
-            <p class="text-secondary">Silakan pilih <strong>Identitas Guru</strong> pada panel kiri<br>untuk membuka akses scanner.</p>
-            <i class="fas fa-arrow-left fa-2x text-primary mt-3 animate-bounce-left"></i>
-        @elseif($jadwalAktif && auth()->user()->role != 'admin' && auth()->user()->guru_id != $jadwalAktif->guru_id)
-            {{-- Kasus jika jadwal ditemukan tapi bukan milik guru yang login --}}
-            <h4 class="text-danger font-weight-bold">Akses Ditolak</h4>
-            <p class="text-secondary">Jadwal yang sedang berlangsung bukan milik akun Anda.</p>
-        @else
-            <h4 class="text-muted">Scanner Tidak Tersedia</h4>
-            <p class="text-secondary">Tidak ditemukan jadwal mengajar Anda yang aktif saat ini.</p>
-        @endif
-    </div>
-@endif
+                            <div class="text-center py-5">
+                                <img src="https://illustrations.popsy.co/white/calendar.svg" style="width: 200px;" class="mb-4">
+                                @if(auth()->user()->role == 'admin' && !$targetGuruId)
+                                    <h4 class="text-primary font-weight-bold">Mode Admin: Standby</h4>
+                                    <p class="text-secondary">Silakan pilih <strong>Identitas Guru</strong> pada panel kiri.</p>
+                                @else
+                                    <h4 class="text-muted">Scanner Tidak Tersedia</h4>
+                                    <p class="text-secondary">Tidak ditemukan jadwal aktif untuk Anda saat ini.</p>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -146,81 +145,84 @@
     const scannerWrapper = document.getElementById('scannerWrapper');
     let isProcessing = false;
 
+    // DATA SISWA: Hanya membawa data siswa yang ada di rombel jadwal ini
+    // (Difilter dari Controller variabel $daftarSiswa)
     const students = [
         @foreach($daftarSiswa as $s)
         { id: "{{ $s->id }}", nama: "{{ $s->nama_siswa }}", foto: "{{ asset('storage/' . $s->foto) }}" },
         @endforeach
     ];
 
+    // Auto-refresh halaman setiap 2 menit agar jadwal selalu up-to-date
+    setTimeout(() => { location.reload(); }, 120000);
+
     async function initAI() {
-    try {
-        const MODEL_URL = '/models';
-        await Promise.all([
-            faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-        ]);
+        try {
+            const MODEL_URL = '/models';
+            await Promise.all([
+                faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+            ]);
 
-        result.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sinkronisasi Wajah...';
-        const labeledDescriptors = await loadSiswaDescriptors();
-        
-        if (labeledDescriptors.length === 0) {
-            result.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i> Foto Siswa Kelas Ini Kosong';
-            return;
-        }
+            result.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sinkronisasi Wajah Rombel...';
+            const labeledDescriptors = await loadSiswaDescriptors();
+            
+            if (labeledDescriptors.length === 0) {
+                result.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i> Data Siswa Rombel Ini Kosong';
+                return;
+            }
 
-        // AKURASI: Diperketat ke 0.45 (Makin kecil makin sulit tertukar)
-        const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.45); 
-        
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { width: 640, height: 480, facingMode: "user" } 
-        });
-        video.srcObject = stream;
+            const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.45); 
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: 640, height: 480, facingMode: "user" } 
+            });
+            video.srcObject = stream;
 
-        result.className = "badge badge-success shadow-lg px-4 py-3";
-        result.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Sistem Siap';
+            result.className = "badge badge-success shadow-lg px-4 py-3";
+            result.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Scanner Rombel Siap';
 
-        video.addEventListener('play', () => {
-            setInterval(async () => {
-                if (isProcessing) return;
+            video.addEventListener('play', () => {
+                setInterval(async () => {
+                    if (isProcessing) return;
 
-                // DETEKSI: minConfidence 0.8 agar tidak salah deteksi objek lain
-                const detections = await faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.8 }))
-                    .withFaceLandmarks()
-                    .withFaceDescriptors();
+                    const detections = await faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.8 }))
+                        .withFaceLandmarks()
+                        .withFaceDescriptors();
 
-                if (detections.length > 0) {
-                    const bestMatch = faceMatcher.findBestMatch(detections[0].descriptor);
-                    
-                    // Jika label bukan 'unknown' dan jarak kecocokan (distance) di bawah 0.45
-                    if (bestMatch.label !== 'unknown' && bestMatch.distance < 0.45) {
-                        const [nama, id] = bestMatch.label.split('|');
-                        handleAbsensi(id, nama);
-                    } else {
-                        // Jika ada wajah tapi tidak dikenal di rombel ini
-                        showWarning("Wajah Tidak Dikenali / Bukan Anggota Kelas Ini");
+                    if (detections.length > 0) {
+                        const bestMatch = faceMatcher.findBestMatch(detections[0].descriptor);
+                        
+                        // KUNCI: Hanya proses jika wajah dikenal di rombel ini
+                        if (bestMatch.label !== 'unknown') {
+                            const [nama, id] = bestMatch.label.split('|');
+                            handleAbsensi(id, nama);
+                        } else {
+                            // Feedback jika wajah ada tapi bukan siswa kelas ini
+                            showErrorVisual("Wajah Tidak Terdaftar di Rombel Ini");
+                        }
                     }
-                }
-            }, 1000);
-        });
-    } catch (err) {
-        result.innerHTML = '<i class="fas fa-times-circle mr-2"></i> Kamera Error';
-    }
-}
-
-// Tambahkan fungsi warning agar user tahu dia ditolak
-function showWarning(pesan) {
-    result.className = "badge badge-danger shadow-lg px-4 py-3";
-    result.innerHTML = `<i class="fas fa-user-slash mr-2"></i> ${pesan}`;
-    scannerWrapper.style.borderColor = "#dc3545";
-    setTimeout(() => {
-        if(!isProcessing) {
-            result.className = "badge badge-primary shadow-lg px-4 py-3";
-            result.innerHTML = '<i class="fas fa-user-shield mr-2"></i> Memindai Wajah...';
-            scannerWrapper.style.borderColor = "#fff";
+                }, 1000);
+            });
+        } catch (err) {
+            result.innerHTML = '<i class="fas fa-times-circle mr-2"></i> Kamera Error';
         }
-    }, 1500);
-}
+    }
+
+    // Fungsi visual feedback saat error/tidak dikenal
+    function showErrorVisual(pesan) {
+        result.className = "badge badge-danger shadow-lg px-4 py-3";
+        result.innerHTML = `<i class="fas fa-user-slash mr-2"></i> ${pesan}`;
+        scannerWrapper.style.borderColor = "#dc3545";
+        setTimeout(() => {
+            if(!isProcessing) {
+                result.className = "badge badge-primary shadow-lg px-4 py-3";
+                result.innerHTML = '<i class="fas fa-user-shield mr-2"></i> Memindai Wajah...';
+                scannerWrapper.style.borderColor = "#fff";
+            }
+        }, 1500);
+    }
 
     async function loadSiswaDescriptors() {
         return Promise.all(
@@ -237,10 +239,8 @@ function showWarning(pesan) {
 
     async function handleAbsensi(siswaId, nama) {
         isProcessing = true;
-        
-        // Feedback Visual & Audio yang lembut
         result.className = "badge badge-warning shadow-lg px-4 py-3";
-        result.innerHTML = `<i class="fas fa-user-check mr-2"></i> Mengenali: ${nama}...`;
+        result.innerHTML = `<i class="fas fa-user-check mr-2"></i> Mencatat: ${nama}...`;
 
         try {
             const response = await fetch("{{ route('presensi.store') }}", {
@@ -257,12 +257,10 @@ function showWarning(pesan) {
                 result.className = "badge badge-success shadow-lg px-4 py-3";
                 result.innerHTML = `<i class="fas fa-check-double mr-2"></i> Hadir: ${nama}`;
                 
-                // AUDIO: Volume 0.2 (Sangat lembut agar tidak kaget)
                 let audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); 
                 audio.volume = 0.2;
                 audio.play();
 
-                // VISUAL: Border Hijau
                 scannerWrapper.style.borderColor = "#28a745";
                 setTimeout(() => { scannerWrapper.style.borderColor = "#fff"; }, 2000);
             } else {
