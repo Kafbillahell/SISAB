@@ -10,15 +10,23 @@ class KelasSeeder extends Seeder
 {
     public function run(): void
     {
-        // Ambil ID dari jurusan PPLG-RPL yang sudah kita buat sebelumnya
-        $jurusan = Jurusan::where('kode_jurusan', 'PPLG-RPL')->first();
+        // Ambil semua jurusan yang sudah dibuat
+        $jurusans = Jurusan::all();
 
-        if ($jurusan) {
-            Kelas::create([
-                'tingkat'    => '12',             // Sesuai dokumen "XII" 
-                'nama_kelas' => 'PPLG-RPL 1',     // Sesuai dokumen 
-                'jurusan_id' => $jurusan->id,     // Relasi ke tabel jurusans
-            ]);
+        // Data untuk kelas per tingkat
+        $tingkats = ['10', '11', '12'];
+        $jumlahKelas = 2; // Jumlah kelas per tingkat per jurusan
+
+        foreach ($jurusans as $jurusan) {
+            foreach ($tingkats as $tingkat) {
+                for ($i = 1; $i <= $jumlahKelas; $i++) {
+                    Kelas::create([
+                        'tingkat'    => $tingkat,
+                        'nama_kelas' => $jurusan->kode_jurusan . ' ' . $tingkat . '-' . $i,
+                        'jurusan_id' => $jurusan->id,
+                    ]);
+                }
+            }
         }
     }
 }
