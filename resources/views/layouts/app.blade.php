@@ -20,6 +20,21 @@
     <link href="{{ asset('assets/css/sb-admin-2.css') }}" rel="stylesheet">
     
     <style>
+        * {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+        
         #wrapper {
             display: flex;
         }
@@ -33,11 +48,84 @@
             overflow-y: auto;
             z-index: 100;
             flex-shrink: 0;
+            will-change: transform;
+            backface-visibility: hidden;
+            perspective: 1000px;
+            contain: layout style paint;
         }
         
         #wrapper #content-wrapper {
             margin-left: 6.5rem;
             width: calc(100% - 6.5rem);
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: margin-left;
+            backface-visibility: hidden;
+            perspective: 1000px;
+            contain: layout style paint;
+            flex: 1;
+        }
+        
+        #wrapper #content-wrapper #content {
+            will-change: contents;
+            contain: content;
+        }
+        
+        #wrapper #content-wrapper .container-fluid {
+            will-change: contents;
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
+        
+        .container-fluid {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            transform: translateZ(0);
+            contain: layout style paint;
+        }
+        
+        .sidebar .nav-item .collapse {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            will-change: opacity, visibility;
+            backface-visibility: hidden;
+        }
+        
+        .sidebar .nav-item .nav-link {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: color, background-color;
+            backface-visibility: hidden;
+        }
+        
+        .sidebar .nav-item .collapse.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .sidebar .nav-item .collapse:not(.show) {
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        /* Smooth content rendering */
+        img, picture, video, canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            will-change: auto;
+        }
+        
+        a, button {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: color, background-color, transform;
+            backface-visibility: hidden;
+        }
+        
+        input, textarea, select {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            backface-visibility: hidden;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            will-change: box-shadow, border-color;
         }
         
         @media (min-width: 768px) {
@@ -49,18 +137,70 @@
                 margin-left: 14rem;
                 width: calc(100% - 14rem);
             }
+            
+            .sidebar .nav-item .collapse {
+                position: relative !important;
+                left: 0 !important;
+                top: 0 !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+            }
         }
         
         @media (max-width: 767.98px) {
             .sidebar.toggled {
                 width: 0 !important;
                 overflow: hidden;
+                transform: translateX(-100%);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            
+            .sidebar:not(.toggled) {
+                transform: translateX(0);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
             
             #wrapper #content-wrapper {
                 margin-left: 0;
                 width: 100%;
             }
+        }
+        
+        /* Smooth scrollbar */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Content scrollbar smooth */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.02);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.2);
         }
     </style>
 
