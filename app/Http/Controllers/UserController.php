@@ -8,11 +8,24 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    public function index()
-    {
-        $users = User::latest()->get();
-        return view('admin.users.index', compact('users'));
+    public function index(Request $request)
+{
+    // Ambil filter role dari URL, default-nya 'admin'
+    $role = $request->query('role', 'admin');
+
+    // Validasi role agar aman
+    if (!in_array($role, ['admin', 'guru', 'siswa'])) {
+        $role = 'admin';
     }
+
+    // PENTING: Batasi data per halaman (misal 20)
+    $users = User::where('role', $role)
+                ->latest()
+                ->paginate(20)
+                ->withQueryString(); 
+
+    return view('admin.users.index', compact('users', 'role'));
+}
 
     public function store(Request $request)
 {
