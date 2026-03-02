@@ -13,28 +13,32 @@ class RombelSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Ambil data Jurusan PPLG-RPL [cite: 1]
-        $jurusan = Jurusan::where('kode_jurusan', 'PPLG-RPL')->first();
-
-        // 2. Ambil data Kelas XII [cite: 1]
-        $kelas = Kelas::where('tingkat', '12')->first();
-
-        // 3. Ambil data Wali Kelas (Contoh: Yayat Ruhiyat) [cite: 1]
-        $guru = Guru::where('nama_guru', 'LIKE', '%Yayat Ruhiyat%')->first();
-
-        // 4. Ambil Tahun Ajaran Aktif (2025/2026 Genap) [cite: 2]
+        // Ambil Tahun Ajaran Aktif
         $ta = TahunAjaran::where('is_active', true)->first();
 
-        if ($jurusan && $kelas && $ta) {
-            Rombel::updateOrCreate(
-                ['nama_rombel' => 'XII PPLG-RPL 1'], // [cite: 3]
-                [
-                    'jurusan_id'      => $jurusan->id, // Kolom baru Anda
-                    'kelas_id'        => $kelas->id,
-                    'guru_id'         => $guru ? $guru->id : null,
-                    'tahun_ajaran_id' => $ta->id,
-                ]
-            );
+        if (!$ta) {
+            return;
+        }
+
+        // Ambil semua kelas
+        $kelas = Kelas::with('jurusan')->get();
+
+        // Ambil semua guru untuk dibagi sebagai wali kelas
+        $gurus = Guru::all();
+        $guruIndex = 0;
+
+        foreach ($kelas as $k) {
+            // Cycle melalui guru-guru untuk menjadi wali kelas
+            $guru = $gurus->count() > 0 ? $gurus[$guruIndex % $gurus->count()] : null;
+            $guruIndex++;
+
+            Rombel::create([
+                'nama_rombel'     => $k->nama_kelas,
+                'jurusan_id'      => $k->jurusan_id,
+                'kelas_id'        => $k->id,
+                'guru_id'         => $guru ? $guru->id : null,
+                'tahun_ajaran_id' => $ta->id,
+            ]);
         }
     }
 }

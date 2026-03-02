@@ -106,26 +106,70 @@ class PresensiController extends Controller
 
     public function scanner(Request $request)
 {
-    $now = now()->setTimezone('Asia/Jakarta');
+    // 1. Ambil Waktu & Hari Real-time
+    $now = \Carbon\Carbon::now()->setTimezone('Asia/Jakarta');
     $hariIndo = $this->getHariIndo($now->format('l'));
     $jamSekarang = $now->format('H:i:s');
 
-    $allGurus = Guru::all();
-    $targetGuruId = $request->guru_id ?? (auth()->user()->guru_id ?? null);
+    $allGurus = \App\Models\Guru::all();
+    $user = auth()->user();
+    $targetGuruId = null;
+    $jadwalAktif = null;
 
-    $jadwalAktif = Jadwal::where('hari', $hariIndo)
-        ->whereTime('jam_mulai', '<=', $jamSekarang)
-        ->whereTime('jam_selesai', '>=', $jamSekarang)
-        ->with(['mapel', 'rombel'])
-        ->when($targetGuruId, function($q) use ($targetGuruId) {
-            return $q->where('guru_id', $targetGuruId);
-        })
-        ->first();
+    // 2. LOGIKA PENENTUAN JADWAL
+    if ($user->role == 'admin') { 
+        $targetGuruId = $request->guru_id;
+        if ($targetGuruId) {
+            $jadwalAktif = \App\Models\Jadwal::where('guru_id', $targetGuruId)
+                ->where('hari', $hariIndo)
+                ->whereTime('jam_mulai', '<=', $jamSekarang)
+                ->whereTime('jam_selesai', '>=', $jamSekarang)
+                ->first();
+        }
+    } 
+    elseif ($user->role == 'siswa') {
+        // JIKA SISWA LOGIN: Cari rombel siswa ini
+        $siswa = \App\Models\Siswa::where('user_id', $user->id)->first();
+        
+        if ($siswa) {
+            // Cari rombel tempat siswa ini bernaung
+            $anggotaRombel = \DB::table('anggota_rombels')
+                ->where('siswa_id', $siswa->id)
+                ->first();
 
+            if ($anggotaRombel) {
+                // Cari jadwal yang sedang jalan di rombel siswa tersebut
+                $jadwalAktif = \App\Models\Jadwal::where('rombel_id', $anggotaRombel->rombel_id)
+                    ->where('hari', $hariIndo)
+                    ->whereTime('jam_mulai', '<=', $jamSekarang)
+                    ->whereTime('jam_selesai', '>=', $jamSekarang)
+                    ->first();
+                
+                if ($jadwalAktif) {
+                    $targetGuruId = $jadwalAktif->guru_id;
+                }
+            }
+        }
+    } 
+    else {
+        // JIKA GURU LOGIN
+        $guru = \App\Models\Guru::where('user_id', $user->id)->first();
+        if ($guru) {
+            $targetGuruId = $guru->id;
+            $jadwalAktif = \App\Models\Jadwal::where('guru_id', $targetGuruId)
+                ->where('hari', $hariIndo)
+                ->whereTime('jam_mulai', '<=', $jamSekarang)
+                ->whereTime('jam_selesai', '>=', $jamSekarang)
+                ->first();
+        }
+    }
+
+    // 3. Ambil Daftar Siswa jika jadwal ketemu
     $daftarSiswa = collect();
-
-    // LOGIKA FILTER: Gunakan tabel anggota_rombels
     if ($jadwalAktif) {
+        // Load relasi agar di view tidak error saat panggil $jadwalAktif->guru->nama_guru
+        $jadwalAktif->load(['mapel', 'rombel', 'guru']);
+
         $daftarSiswa = \DB::table('anggota_rombels')
             ->join('siswas', 'anggota_rombels.siswa_id', '=', 'siswas.id')
             ->where('anggota_rombels.rombel_id', $jadwalAktif->rombel_id)
@@ -133,7 +177,12 @@ class PresensiController extends Controller
             ->get(['siswas.id', 'siswas.nama_siswa', 'siswas.foto']);
     }
 
-    return view('presensi.scanner', compact('jadwalAktif', 'daftarSiswa', 'allGurus', 'targetGuruId'));
+    return view('presensi.scanner', [
+        'jadwalAktif' => $jadwalAktif,
+        'daftarSiswa' => $daftarSiswa,
+        'allGurus' => $allGurus,
+        'targetGuruId' => $targetGuruId
+    ]);
 }
 
     public function store(Request $request)

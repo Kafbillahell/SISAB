@@ -18,22 +18,47 @@ class SiswaController extends Controller
      * Menampilkan daftar siswa dari API ZieLabs
      */
     public function index(Request $request)
-    {
-        $siswas = Cache::remember('data_siswa_api_2025', 1800, function () {
-            $response = Http::timeout(60)->get('https://zieapi.zielabs.id/api/getsiswa?tahun=2025');
-            return $response->successful() ? ($response->json()['data'] ?? $response->json()) : [];
+{
+    // 1. Ambil data dari API / Cache
+    $allSiswas = Cache::remember('data_siswa_api_2025', 1800, function () {
+        $response = Http::timeout(60)->get('https://zieapi.zielabs.id/api/getsiswa?tahun=2025');
+        return $response->successful() ? ($response->json()['data'] ?? []) : [];
+    });
+
+    $collection = collect($allSiswas);
+
+    // 2. Ambil list untuk dropdown filter (otomatis dari data API)
+    $list_jurusan = $collection->pluck('jurusan')->unique()->filter()->sort()->values();
+    $list_kelas = $collection->pluck('nama_rombel')->unique()->filter()->sort()->values();
+
+    // 3. Logika Filtering
+    if ($request->filled('search')) {
+        $search = strtolower($request->search);
+        $collection = $collection->filter(function($item) use ($search) {
+            return str_contains(strtolower($item['nama'] ?? ''), $search) || 
+                   str_contains(strtolower($item['nisn'] ?? ''), $search);
         });
-
-        if ($request->has('search')) {
-            $search = strtolower($request->search);
-            $siswas = array_filter($siswas, function($item) use ($search) {
-                return str_contains(strtolower($item['nama'] ?? ''), $search) || 
-                       str_contains(strtolower($item['nisn'] ?? ''), $search);
-            });
-        }
-
-        return view('siswas.index', compact('siswas'));
     }
+
+    if ($request->filled('jurusan')) {
+        $collection = $collection->where('jurusan', $request->jurusan);
+    }
+
+    if ($request->filled('kelas')) {
+        $collection = $collection->where('nama_rombel', $request->kelas);
+    }
+
+    if ($request->filled('jk')) {
+        $collection = $collection->filter(function($item) use ($request) {
+            $jk = $item['jk'] ?? ($item['jenis_kelamin'] ?? '');
+            return $jk == $request->jk;
+        });
+    }
+
+    $siswas = $collection->all();
+
+    return view('siswas.index', compact('siswas', 'list_jurusan', 'list_kelas'));
+}
 
     /**
      * Halaman form pendaftaran wajah (Scanner)

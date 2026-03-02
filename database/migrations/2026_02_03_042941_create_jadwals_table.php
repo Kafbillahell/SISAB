@@ -13,12 +13,14 @@ return new class extends Migration
 {
     Schema::create('jadwals', function (Blueprint $table) {
         $table->id();
-        $table->foreignId('rombel_id')->constrained('rombels');
-        $table->foreignId('mapel_id')->constrained('mapels');
-        $table->foreignId('guru_id')->constrained('gurus');
+        $table->foreignId('rombel_id')->constrained('rombels')->onDelete('cascade');
+        $table->foreignId('mapel_id')->constrained('mapels')->onDelete('cascade');
         
-        // TAMBAHKAN INI: Menghubungkan ke tabel sesis
-        $table->foreignId('sesi_id')->constrained('sesis'); 
+        // Tambahkan ->onDelete('cascade') agar saat Guru dihapus, Jadwalnya ikut terhapus
+        $table->foreignId('guru_id')->constrained('gurus')->onDelete('cascade');
+        
+        // Tambahkan ->onDelete('cascade') untuk Sesi juga
+        $table->foreignId('sesi_id')->constrained('sesis')->onDelete('cascade'); 
 
         $table->enum('hari', ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']);
         $table->time('jam_mulai');
