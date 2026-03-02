@@ -4,61 +4,74 @@ namespace App\Http\Controllers;
 
 use App\Models\Siswa;
 use App\Models\User;
-use App\Models\Rombel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class SiswaController extends Controller
 {
     /**
+     * Helper Private: Mengambil data dari API dengan Cache & Timeout lebih panjang.
+     * Digunakan oleh index(), searchByNisn(), dan sync().
+     */
+    private function getSiswaFromApi()
+    {
+        // Simpan data selama 30 menit (1800 detik)
+        return Cache::remember('data_siswa_api_2025', 1800, function () {
+            // Naikkan timeout ke 120 detik karena payload data 1.6MB+ sangat besar
+            $response = Http::timeout(120)->get('https://zieapi.zielabs.id/api/getsiswa?tahun=2025');
+            
+            if ($response->successful()) {
+                return $response->json()['data'] ?? [];
+            }
+            
+            return [];
+        });
+    }
+
+    /**
      * Menampilkan daftar siswa dari API ZieLabs
      */
     public function index(Request $request)
-{
-    // 1. Ambil data dari API / Cache
-    $allSiswas = Cache::remember('data_siswa_api_2025', 1800, function () {
-        $response = Http::timeout(60)->get('https://zieapi.zielabs.id/api/getsiswa?tahun=2025');
-        return $response->successful() ? ($response->json()['data'] ?? []) : [];
-    });
+    {
+        // 1. Ambil data (dari Cache jika sudah pernah didownload)
+        $allSiswas = $this->getSiswaFromApi();
+        $collection = collect($allSiswas);
 
-    $collection = collect($allSiswas);
+        // 2. Ambil list untuk dropdown filter
+        $list_jurusan = $collection->pluck('jurusan')->unique()->filter()->sort()->values();
+        $list_kelas = $collection->pluck('nama_rombel')->unique()->filter()->sort()->values();
 
-    // 2. Ambil list untuk dropdown filter (otomatis dari data API)
-    $list_jurusan = $collection->pluck('jurusan')->unique()->filter()->sort()->values();
-    $list_kelas = $collection->pluck('nama_rombel')->unique()->filter()->sort()->values();
+        // 3. Logika Filtering
+        if ($request->filled('search')) {
+            $search = strtolower($request->search);
+            $collection = $collection->filter(function($item) use ($search) {
+                return str_contains(strtolower($item['nama'] ?? ''), $search) || 
+                       str_contains(strtolower($item['nisn'] ?? ''), $search);
+            });
+        }
 
-    // 3. Logika Filtering
-    if ($request->filled('search')) {
-        $search = strtolower($request->search);
-        $collection = $collection->filter(function($item) use ($search) {
-            return str_contains(strtolower($item['nama'] ?? ''), $search) || 
-                   str_contains(strtolower($item['nisn'] ?? ''), $search);
-        });
+        if ($request->filled('jurusan')) {
+            $collection = $collection->where('jurusan', $request->jurusan);
+        }
+
+        if ($request->filled('kelas')) {
+            $collection = $collection->where('nama_rombel', $request->kelas);
+        }
+
+        if ($request->filled('jk')) {
+            $collection = $collection->filter(function($item) use ($request) {
+                $jk = $item['jk'] ?? ($item['jenis_kelamin'] ?? '');
+                return $jk == $request->jk;
+            });
+        }
+
+        $siswas = $collection->all();
+
+        return view('siswas.index', compact('siswas', 'list_jurusan', 'list_kelas'));
     }
-
-    if ($request->filled('jurusan')) {
-        $collection = $collection->where('jurusan', $request->jurusan);
-    }
-
-    if ($request->filled('kelas')) {
-        $collection = $collection->where('nama_rombel', $request->kelas);
-    }
-
-    if ($request->filled('jk')) {
-        $collection = $collection->filter(function($item) use ($request) {
-            $jk = $item['jk'] ?? ($item['jenis_kelamin'] ?? '');
-            return $jk == $request->jk;
-        });
-    }
-
-    $siswas = $collection->all();
-
-    return view('siswas.index', compact('siswas', 'list_jurusan', 'list_kelas'));
-}
 
     /**
      * Halaman form pendaftaran wajah (Scanner)
@@ -77,27 +90,27 @@ class SiswaController extends Controller
             'nisn'          => 'required|unique:siswas,nisn',
             'nama_siswa'    => 'required|string|max:255',
             'jenis_kelamin' => 'required|in:L,P',
-            'foto'          => 'required|image|mimes:jpeg,png,jpg|max:2048', // Wajib dari scanner
+            'foto'          => 'required|image|mimes:jpeg,png,jpg|max:2048', 
         ]);
 
         try {
             DB::beginTransaction();
 
-            // 1. Buat Akun User untuk login Siswa
+            // 1. Buat Akun User
             $user = User::create([
                 'name'     => $request->nama_siswa,
-                'email'    => $request->nisn . '@student.sch.id', // Email otomatis dari NISN
-                'password' => Hash::make($request->nisn),         // Password default NISN
+                'email'    => $request->nisn . '@student.sch.id',
+                'password' => Hash::make($request->nisn),
                 'role'     => 'siswa',
             ]);
 
-            // 2. Simpan Foto Wajah
+            // 2. Simpan Foto
             $fotoPath = null;
             if ($request->hasFile('foto')) {
                 $fotoPath = $request->file('foto')->store('foto_siswa', 'public');
             }
 
-            // 3. Simpan ke tabel Siswa lokal
+            // 3. Simpan ke tabel Siswa
             Siswa::create([
                 'user_id'       => $user->id,
                 'nisn'          => $request->nisn,
@@ -116,40 +129,37 @@ class SiswaController extends Controller
     }
 
     /**
-     * Fungsi Tambahan: Mencari data ke API ZieLabs berdasarkan NISN (AJAX)
-     * Gunakan ini di halaman Create agar Nama & JK terisi otomatis
+     * AJAX Search: Mencari data di Cache berdasarkan NISN
      */
     public function searchByNisn($nisn)
     {
-        $response = Http::get("https://zieapi.zielabs.id/api/getsiswa?tahun=2025");
-        $data = collect($response->json()['data'] ?? [])->firstWhere('nisn', $nisn);
+        $allSiswas = $this->getSiswaFromApi();
+        $data = collect($allSiswas)->firstWhere('nisn', $nisn);
 
         if ($data) {
             return response()->json([
                 'success' => true,
                 'nama' => $data['nama'],
-                'jk'   => $data['jk'] ?? 'L'
+                'jk'   => $data['jk'] ?? ($data['jenis_kelamin'] ?? 'L')
             ]);
         }
 
-        return response()->json(['success' => false]);
+        return response()->json(['success' => false], 404);
     }
 
     /**
-     * Mengarahkan ke halaman registrasi wajah dengan data dari API
+     * Mengarahkan ke halaman registrasi wajah dengan data dari API (melalui Cache)
      */
     public function sync($nisn)
     {
-        // 1. Ambil data dari Cache/API untuk memastikan siswa ada
-        $response = Http::get("https://zieapi.zielabs.id/api/getsiswa?tahun=2025");
-        $siswa = collect($response->json()['data'] ?? [])->firstWhere('nisn', $nisn);
+        // Ambil data dari Cache (Instan, tidak download ulang)
+        $allSiswas = $this->getSiswaFromApi();
+        $siswa = collect($allSiswas)->firstWhere('nisn', $nisn);
 
         if (!$siswa) {
             return redirect()->route('siswas.index')->with('error', 'Data siswa tidak ditemukan di API.');
         }
 
-        // 2. Arahkan ke halaman create (scanner wajah) sambil membawa data NISN, Nama, dan JK
-        // Ini akan mempermudah form create terisi otomatis melalui query string
         return view('siswas.create', [
             'nisn' => $nisn,
             'nama' => $siswa['nama'],
