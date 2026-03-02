@@ -17,6 +17,52 @@
         rel="stylesheet">
 
     <link href="{{ asset('assets/css/sb-admin-2.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/css/sb-admin-2.css') }}" rel="stylesheet">
+    
+    <style>
+        #wrapper {
+            display: flex;
+        }
+        
+        .sidebar {
+            position: fixed !important;
+            left: 0;
+            top: 0;
+            width: 6.5rem;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+        
+        #wrapper #content-wrapper {
+            margin-left: 6.5rem;
+            width: calc(100% - 6.5rem);
+        }
+        
+        @media (min-width: 768px) {
+            .sidebar {
+                width: 14rem !important;
+            }
+            
+            #wrapper #content-wrapper {
+                margin-left: 14rem;
+                width: calc(100% - 14rem);
+            }
+        }
+        
+        @media (max-width: 767.98px) {
+            .sidebar.toggled {
+                width: 0 !important;
+                overflow: hidden;
+            }
+            
+            #wrapper #content-wrapper {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+    </style>
 
 </head>
 

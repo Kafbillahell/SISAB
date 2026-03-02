@@ -9,3 +9,29 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/* Fix sidebar scrolling issue */
+.sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+@media (min-width: 768px) {
+    #wrapper #content-wrapper {
+        margin-left: 14rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    #wrapper #content-wrapper {
+        margin-left: 0;
+    }
+    
+    .sidebar.toggled {
+        width: 0 !important;
+    }
+}
