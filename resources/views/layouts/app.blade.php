@@ -243,7 +243,10 @@
                 <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                    <a class="btn btn-primary" href="login.html">Logout</a>
+                    <form action="{{ route('logout') }}" method="POST" style="display:inline">
+                        @csrf
+                        <button type="submit" class="btn btn-primary">Logout</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -260,6 +263,27 @@
 
     <script src="{{ asset('assets/js/demo/chart-area-demo.js') }}"></script>
     <script src="{{ asset('assets/js/demo/chart-pie-demo.js') }}"></script>
+
+    <script>
+        // Ensure modals are direct children of <body> to avoid stacking/context z-index issues
+        document.addEventListener('DOMContentLoaded', function () {
+            try {
+                document.querySelectorAll('.modal').forEach(function (m) {
+                    if (m.parentNode && m.parentNode !== document.body) document.body.appendChild(m);
+                });
+            } catch (e) {
+                // ignore
+            }
+        });
+
+        // For dynamic cases, ensure modals are appended to body on show (requires jQuery + Bootstrap)
+        if (window.jQuery) {
+            window.jQuery(document).on('show.bs.modal', '.modal', function () {
+                var m = window.jQuery(this);
+                if (m.parent()[0] !== document.body) m.appendTo('body');
+            });
+        }
+    </script>
 
 </body>
 </html>
