@@ -245,7 +245,8 @@ class ManualPresensiController extends Controller
                         'waktu_scan' => $waktu,
                         'status' => $stat,
                         'keterangan' => $stat,
-                        'jadwal_id' => $jadwalId
+                        'jadwal_id' => $jadwalId,
+                        'tanggal' => $tanggal->format('Y-m-d')
                     ]);
                 } else {
                     // Create new manual presensi
@@ -254,7 +255,8 @@ class ManualPresensiController extends Controller
                         'jadwal_id' => $jadwalId,
                         'waktu_scan' => $waktu,
                         'status' => $stat,
-                        'keterangan' => $stat
+                        'keterangan' => $stat,
+                        'tanggal' => $tanggal->format('Y-m-d')
                     ]);
                 }
             });

@@ -63,7 +63,7 @@ class PresensiController extends Controller
                 })
                 ->whereBetween('waktu_scan', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
                 ->selectRaw('DATE(waktu_scan) as tanggal, jadwal_id')
-                ->groupBy('tanggal', 'jadwal_id')
+                ->groupByRaw('DATE(waktu_scan), jadwal_id')
                 ->get()
                 ->count();
 
@@ -198,7 +198,7 @@ class PresensiController extends Controller
             ->whereNotNull('siswas.foto')
             ->get(['siswas.id', 'siswas.nama_siswa', 'siswas.foto']);
 
-        $today = Carbon::today();
+        $today = Carbon::today()->setTimezone('Asia/Jakarta');
 
         $result = $siswas->map(function($s) use ($jadwalId, $today) {
             $presensi = \App\Models\Presensi::where('siswa_id', $s->id)
@@ -252,9 +252,11 @@ class PresensiController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Sesi absen sudah berakhir atau tidak sesuai hari!'], 403);
         }
 
+        $todayForCheck = Carbon::today()->setTimezone('Asia/Jakarta')->format('Y-m-d');
+
         $existing = Presensi::where('siswa_id', $siswaId)
             ->where('jadwal_id', $jadwalId)
-            ->whereDate('waktu_scan', Carbon::today())
+            ->whereDate('waktu_scan', $todayForCheck)
             ->first();
 
         if ($existing) {
@@ -263,21 +265,58 @@ class PresensiController extends Controller
 
             // Jika sudah absen otomatis (keterangan = Hadir), beri tahu sudah exists
             if ($keterangan === 'hadir' || $status === 'hadir') {
-                return response()->json(['status' => 'exists', 'message' => 'Sudah absen hari ini!']);
+                return response()->json(['status' => 'exists', 'message' => 'Siswa sudah absen.']);
             }
 
             // Jika ada presensi manual (Izin/Sakit/Alpa), blokir absen otomatis
             return response()->json(['status' => 'blocked', 'message' => 'Terdaftar presensi manual untuk siswa ini. Tidak bisa absen otomatis.'], 409);
         }
 
-        Presensi::create([
-            'siswa_id' => $siswaId,
-            'jadwal_id' => $jadwalId,
-            'waktu_scan' => now()->setTimezone('Asia/Jakarta'),
-            'keterangan' => 'Hadir'
-        ]);
+        // Gunakan kunci bernama MySQL agar operasi insert serial (menghindari race condition)
+        $lockName = "presensi_{$siswaId}_{$jadwalId}_{$todayForCheck}";
+        $gotLock = DB::select('SELECT GET_LOCK(?, 5) as got', [$lockName]);
+        $acquired = isset($gotLock[0]) && (int)($gotLock[0]->got ?? $gotLock[0]->GET_LOCK) === 1;
 
-        return response()->json(['status' => 'success', 'message' => 'Absensi berhasil dicatat!']);
+        try {
+            if (! $acquired) {
+                // Jika tidak dapat kunci, fallback cek eksistensi dan beri tahu
+                $nowExists = Presensi::where('siswa_id', $siswaId)
+                    ->where('jadwal_id', $jadwalId)
+                    ->whereDate('waktu_scan', $todayForCheck)
+                    ->exists();
+
+                if ($nowExists) {
+                    return response()->json(['status' => 'exists', 'message' => 'Siswa sudah absen.']);
+                }
+
+                return response()->json(['status' => 'error', 'message' => 'Gagal memperoleh kunci. Coba lagi.'], 423);
+            }
+
+            // Setelah memperoleh kunci, cek ulang apakah sudah ada presensi (mungkin dibuat paralel)
+            $nowExists = Presensi::where('siswa_id', $siswaId)
+                ->where('jadwal_id', $jadwalId)
+                ->whereDate('waktu_scan', $todayForCheck)
+                ->exists();
+
+            if ($nowExists) {
+                return response()->json(['status' => 'exists', 'message' => 'Siswa sudah absen.']);
+            }
+
+            // Insert record presensi
+            Presensi::create([
+                'siswa_id' => $siswaId,
+                'jadwal_id' => $jadwalId,
+                'waktu_scan' => now()->setTimezone('Asia/Jakarta'),
+                'keterangan' => 'Hadir'
+            ]);
+
+            return response()->json(['status' => 'success', 'message' => 'Absensi berhasil dicatat!']);
+        } finally {
+            // Lepaskan kunci jika sempat diperoleh
+            if ($acquired) {
+                DB::select('SELECT RELEASE_LOCK(?)', [$lockName]);
+            }
+        }
     }
 
     private function getHariIndo($day)
