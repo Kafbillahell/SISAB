@@ -145,13 +145,17 @@
     const scannerWrapper = document.getElementById('scannerWrapper');
     let isProcessing = false;
 
-    // DATA SISWA: Hanya membawa data siswa yang ada di rombel jadwal ini
-    // (Difilter dari Controller variabel $daftarSiswa)
-    const students = [
-        @foreach($daftarSiswa as $s)
-        { id: "{{ $s->id }}", nama: "{{ $s->nama_siswa }}", foto: "{{ asset('storage/' . $s->foto) }}" },
-        @endforeach
-    ];
+    // DATA SISWA: ambil via AJAX hanya dari rombel aktif (mengurangi payload global)
+    let students = [];
+    async function fetchStudentsForRombel(rombelId) {
+        try {
+            const resp = await fetch(`{{ url('/presensi/daftar-siswa') }}/${rombelId}`);
+            const json = await resp.json();
+            students = json.data || [];
+        } catch (e) {
+            students = [];
+        }
+    }
 
     // Auto-refresh halaman setiap 2 menit agar jadwal selalu up-to-date
     setTimeout(() => { location.reload(); }, 120000);
@@ -166,6 +170,10 @@
             ]);
 
             result.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sinkronisasi Wajah Rombel...';
+            // Ambil students via AJAX bila ada jadwalAktif
+            if ("{{ $jadwalAktif->rombel->id ?? '' }}") {
+                await fetchStudentsForRombel({{ $jadwalAktif->rombel->id }});
+            }
             const labeledDescriptors = await loadSiswaDescriptors();
             
             if (labeledDescriptors.length === 0) {

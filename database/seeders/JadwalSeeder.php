@@ -30,19 +30,39 @@ class JadwalSeeder extends Seeder
         $hariDaftar = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
 
         // 2. Loop Setiap Rombel (10.1 - 10.5 dan 11.1 - 11.7)
+        // Track guru assignments per hari+sesi to avoid double-booking
+        $assigned = [];
+
         foreach ($rombels as $rombel) {
             foreach ($hariDaftar as $hari) {
                 foreach ($sesis as $sesi) {
-                    
+
                     // --- LOGIKA KHUSUS JUMAT ---
                     // Membatasi KBM hari Jumat hanya sampai jam 11:00
                     if ($hari === 'Jumat' && $sesi->jam_mulai >= '11:00:00') {
                         break; 
                     }
 
-                    // Ambil mapel & guru secara acak untuk simulasi
+                    // Pastikan ada guru yang belum ditugaskan pada hari+sesi ini
+                    $key = $hari . '_' . $sesi->id;
+                    $usedGuruIds = $assigned[$key] ?? [];
+
+                    $availableGurus = $gurus->filter(function($g) use ($usedGuruIds) {
+                        return ! in_array($g->id, $usedGuruIds);
+                    })->values();
+
+                    if ($availableGurus->isEmpty()) {
+                        // Tidak ada guru tersisa untuk slot ini — log dan lewati
+                        $this->command->warn("Tidak ada guru tersedia untuk hari {$hari} sesi {$sesi->id} (rombel {$rombel->nama_rombel}), melewatkan slot.");
+                        continue;
+                    }
+
+                    // Pilih guru yang tersedia secara acak dan tandai sebagai digunakan untuk hari+sesi ini
+                    $guru = $availableGurus->random();
+                    $assigned[$key][] = $guru->id;
+
+                    // Pilih mapel secara acak (boleh sama antar rombel)
                     $mapel = $mapels->random();
-                    $guru = $gurus->random();
 
                     Jadwal::create([
                         'rombel_id'   => $rombel->id,

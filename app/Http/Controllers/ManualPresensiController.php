@@ -75,17 +75,29 @@ class ManualPresensiController extends Controller
         // Pilihan tanggal (default hari ini) dan jadwal terpilih (dari request atau default)
         $selectedTanggal = $request->tanggal ?? date('Y-m-d');
 
-        if ($selectedRombel) {
+        // Derive rombel id from selected model or request param to be more robust
+        $rombelId = null;
+        if ($selectedRombel && isset($selectedRombel->id)) {
+            $rombelId = $selectedRombel->id;
+        } elseif ($request->filled('rombel_id')) {
+            $rombelId = $request->rombel_id;
+            // ensure selectedRombel is a model for view usage
+            if (! $selectedRombel) {
+                $selectedRombel = Rombel::find($rombelId);
+            }
+        }
+
+        if ($rombelId) {
             $siswas = DB::table('anggota_rombels')
                 ->join('siswas', 'anggota_rombels.siswa_id', '=', 'siswas.id')
-                ->where('anggota_rombels.rombel_id', $selectedRombel->id)
+                ->where('anggota_rombels.rombel_id', $rombelId)
                 ->select('siswas.id', 'siswas.nama_siswa', 'siswas.foto')
                 ->get();
 
             // Hanya tampilkan jadwal yang berjalan pada tanggal yang dipilih untuk rombel tersebut
             $hariIndo = $this->getHariIndo(Carbon::parse($selectedTanggal)->format('l'));
 
-            $jadwalQuery = Jadwal::where('rombel_id', $selectedRombel->id)
+            $jadwalQuery = Jadwal::where('rombel_id', $rombelId)
                 ->where('hari', $hariIndo)
                 ->with('mapel', 'guru');
 
@@ -134,17 +146,23 @@ class ManualPresensiController extends Controller
             $selectedJadwal = $lockedJadwalId;
         }
 
-        // Ambil status presensi yang sudah tersimpan untuk tanggal dan jadwal tersebut
-        $presensiStatuses = [];
+        // Ambil presensi yang sudah tersimpan untuk tanggal dan jadwal tersebut (status + keterangan)
+        $presensiMap = [];
         if ($selectedJadwal) {
-            $presensiStatuses = Presensi::where('jadwal_id', $selectedJadwal)
+            $rows = Presensi::where('jadwal_id', $selectedJadwal)
                 ->whereDate('waktu_scan', $selectedTanggal)
-                ->pluck('status', 'siswa_id')
-                ->toArray();
+                ->get(['siswa_id', 'status', 'keterangan']);
+
+            foreach ($rows as $r) {
+                $presensiMap[$r->siswa_id] = [
+                    'status' => $r->status,
+                    'keterangan' => $r->keterangan,
+                ];
+            }
         }
 
         return view('presensi.manual', compact(
-            'rombels', 'selectedRombel', 'siswas', 'jadwals', 'defaultJadwalId', 'selectedTanggal', 'selectedJadwal', 'presensiStatuses', 'jadwal_locked', 'lockedJadwalId'
+            'rombels', 'selectedRombel', 'siswas', 'jadwals', 'defaultJadwalId', 'selectedTanggal', 'selectedJadwal', 'presensiMap', 'jadwal_locked', 'lockedJadwalId'
         ));
     }
 
@@ -192,6 +210,13 @@ class ManualPresensiController extends Controller
                 ->first();
 
             if ($existing) {
+                // Jika sudah tercatat sebagai hadir otomatis, jangan timpa oleh input manual
+                $existingKeterangan = strtolower(trim((string)($existing->keterangan ?? '')));
+                if ($existingKeterangan === 'hadir') {
+                    // skip overwrite
+                    continue;
+                }
+
                 $existing->update([
                     'waktu_scan' => $waktu,
                     'status' => $stat,
