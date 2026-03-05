@@ -158,6 +158,13 @@
         }
     }
 
+    // Optional: keep students fresh (in case manual presensi dibuat dari panel lain)
+    let studentsRefreshInterval = null;
+    function startStudentsAutoRefresh(rombelId) {
+        if (studentsRefreshInterval) clearInterval(studentsRefreshInterval);
+        studentsRefreshInterval = setInterval(() => fetchStudentsForRombel(rombelId), 5000);
+    }
+
     // Auto-refresh halaman setiap 2 menit agar jadwal selalu up-to-date
     setTimeout(() => { location.reload(); }, 120000);
 
@@ -174,6 +181,8 @@
             // Ambil students via AJAX bila ada jadwalAktif
             if ("{{ $jadwalAktif->rombel->id ?? '' }}") {
                 await fetchStudentsForRombel({{ $jadwalAktif->rombel->id }});
+                // start periodic refresh so manual presensi created elsewhere is reflected
+                startStudentsAutoRefresh({{ $jadwalAktif->rombel->id }});
             }
             const labeledDescriptors = await loadSiswaDescriptors();
             
@@ -258,7 +267,7 @@
         result.className = "badge badge-warning shadow-lg px-4 py-3";
         result.innerHTML = `<i class="fas fa-user-check mr-2"></i> Mencatat: ${nama}...`;
 
-        try {
+            try {
             const response = await fetch("{{ route('presensi.store') }}", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
@@ -269,7 +278,7 @@
             });
 
             const data = await response.json();
-            if (data.status === 'success') {
+                if (data.status === 'success') {
                 result.className = "badge badge-success shadow-lg px-4 py-3";
                 result.innerHTML = `<i class="fas fa-check-double mr-2"></i> Hadir: ${nama}`;
                 
@@ -279,9 +288,19 @@
 
                 scannerWrapper.style.borderColor = "#28a745";
                 setTimeout(() => { scannerWrapper.style.borderColor = "#fff"; }, 2000);
-            } else {
-                result.innerHTML = `<i class="fas fa-info-circle mr-2"></i> ${nama} Sudah Absen`;
-            }
+                } else if (data.status === 'blocked' || response.status === 409) {
+                    // Server blocked since there's a manual presensi (Izin/Sakit/Alpa)
+                    showManualWarning(`${nama}: ${data.message || 'Terdaftar presensi manual.'}`);
+                    // Refresh students cache so next detections reflect manual state
+                    if ("{{ $jadwalAktif->rombel->id ?? '' }}") {
+                        await fetchStudentsForRombel({{ $jadwalAktif->rombel->id }});
+                    }
+                } else if (data.status === 'exists') {
+                    result.className = "badge badge-info shadow-lg px-4 py-3";
+                    result.innerHTML = `<i class="fas fa-info-circle mr-2"></i> ${nama} Sudah Absen`;
+                } else {
+                    result.innerHTML = `<i class="fas fa-info-circle mr-2"></i> ${data.message || (nama + ' Sudah Absen')}`;
+                }
         } catch (e) {
             result.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i> Koneksi Gagal`;
         }
