@@ -302,15 +302,27 @@ class PresensiController extends Controller
                 return response()->json(['status' => 'exists', 'message' => 'Siswa sudah absen.']);
             }
 
-            // Insert record presensi
-            Presensi::create([
-                'siswa_id' => $siswaId,
-                'jadwal_id' => $jadwalId,
-                'waktu_scan' => now()->setTimezone('Asia/Jakarta'),
-                'keterangan' => 'Hadir'
-            ]);
+            // Insert record presensi (tangani kemungkinan unique constraint pada DB)
+            try {
+                Presensi::create([
+                    'siswa_id' => $siswaId,
+                    'jadwal_id' => $jadwalId,
+                    'waktu_scan' => now()->setTimezone('Asia/Jakarta'),
+                    'keterangan' => 'Hadir'
+                ]);
 
-            return response()->json(['status' => 'success', 'message' => 'Absensi berhasil dicatat!']);
+                return response()->json(['status' => 'success', 'message' => 'Absensi berhasil dicatat!']);
+            } catch (\Illuminate\Database\QueryException $ex) {
+                // SQLSTATE 23000 (integrity constraint violation) likely duplicate unique index
+                $sqlState = $ex->getCode();
+                if (in_array($sqlState, ['23000', '23505'])) {
+                    return response()->json(['status' => 'exists', 'message' => 'Siswa sudah absen.']);
+                }
+
+                // Jika error lain, rethrow so it's visible in logs (but return JSON to client)
+                \Log::error('Presensi create failed: '.$ex->getMessage());
+                return response()->json(['status' => 'error', 'message' => 'Gagal mencatat absensi.'], 500);
+            }
         } finally {
             // Lepaskan kunci jika sempat diperoleh
             if ($acquired) {
