@@ -84,7 +84,7 @@ class GuruController extends Controller
             ['email' => $email],
             [
                 'name'     => $dataApi['nama_guru'] ?? ($dataApi['nama'] ?? 'Guru Baru'),
-                'password' => Hash::make($dataApi['nip'] ?? '12345678'),
+                'password' => Hash::make('gurusmk123'),
                 'role'     => 'guru',
             ]
         );

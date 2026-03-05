@@ -71,6 +71,8 @@ class ManualPresensiController extends Controller
         $siswas = collect();
         $jadwals = collect();
         $defaultJadwalId = null;
+        $jadwal_locked = false;
+        $lockedJadwalId = null;
 
         // Pilihan tanggal (default hari ini) dan jadwal terpilih (dari request atau default)
         $selectedTanggal = $request->tanggal ?? date('Y-m-d');
@@ -201,36 +203,61 @@ class ManualPresensiController extends Controller
         foreach ($request->input('status', []) as $siswaId => $stat) {
             if (empty($stat)) continue;
 
-            // Upsert presensi untuk siswa, jadwal, dan tanggal yang sama
+            // Normalize keterangan
+            $stat = trim((string)$stat);
             $waktu = $tanggal->copy()->addHours(8); // jam default 08:00
 
-            $existing = Presensi::where('siswa_id', $siswaId)
-                ->where('jadwal_id', $jadwalId)
-                ->whereDate('waktu_scan', $tanggal->format('Y-m-d'))
-                ->first();
+            // Use transaction + row lock to avoid duplicate inserts on concurrent requests
+            DB::transaction(function() use ($siswaId, $jadwalId, $tanggal, $stat, $waktu) {
+                // Prefer existing record for same jadwal
+                $existing = Presensi::where('siswa_id', $siswaId)
+                    ->where('jadwal_id', $jadwalId)
+                    ->whereDate('waktu_scan', $tanggal->format('Y-m-d'))
+                    ->lockForUpdate()
+                    ->first();
 
-            if ($existing) {
-                // Jika sudah tercatat sebagai hadir otomatis, jangan timpa oleh input manual
-                $existingKeterangan = strtolower(trim((string)($existing->keterangan ?? '')));
-                if ($existingKeterangan === 'hadir') {
-                    // skip overwrite
-                    continue;
+                // If not found, try to find any manual presensi today for this siswa (so edits update same row)
+                if (! $existing) {
+                    $existing = Presensi::where('siswa_id', $siswaId)
+                        ->whereDate('waktu_scan', $tanggal->format('Y-m-d'))
+                        ->whereIn('keterangan', ['Izin', 'Sakit', 'Alpa'])
+                        ->lockForUpdate()
+                        ->first();
                 }
 
-                $existing->update([
-                    'waktu_scan' => $waktu,
-                    'status' => $stat,
-                    'keterangan' => $stat
-                ]);
-            } else {
-                Presensi::create([
-                    'siswa_id' => $siswaId,
-                    'jadwal_id' => $jadwalId,
-                    'waktu_scan' => $waktu,
-                    'status' => $stat,
-                    'keterangan' => $stat
-                ]);
-            }
+                if ($existing) {
+                    $existingKeterangan = trim((string)($existing->keterangan ?? ''));
+                    $existingLower = strtolower($existingKeterangan);
+                    $newLower = strtolower($stat);
+
+                    // If already automatic hadir, never overwrite
+                    if ($existingLower === 'hadir') {
+                        return; // skip
+                    }
+
+                    // If existing manual is same as new input, do nothing (idempotent)
+                    if ($existingLower === $newLower) {
+                        return; // skip duplicate
+                    }
+
+                    // Update existing manual record (allow changing Alpa->Sakit, etc.)
+                    $existing->update([
+                        'waktu_scan' => $waktu,
+                        'status' => $stat,
+                        'keterangan' => $stat,
+                        'jadwal_id' => $jadwalId
+                    ]);
+                } else {
+                    // Create new manual presensi
+                    Presensi::create([
+                        'siswa_id' => $siswaId,
+                        'jadwal_id' => $jadwalId,
+                        'waktu_scan' => $waktu,
+                        'status' => $stat,
+                        'keterangan' => $stat
+                    ]);
+                }
+            });
         }
 
         // Redirect to index route with query params so the page reloads and shows saved statuses

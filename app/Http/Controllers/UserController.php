@@ -28,31 +28,40 @@ class UserController extends Controller
 }
 
     public function store(Request $request)
-{
-    $request->validate([
-        'name'     => 'required|string|max:255',
-        'email'    => 'required|email|unique:users,email',
-        'password' => 'required|min:6',
-        'role'     => 'required|in:admin,guru,siswa',
-    ], [
-        'name.required'     => 'Nama lengkap wajib diisi.',
-        'email.required'    => 'Email wajib diisi.',
-        'email.email'       => 'Format email tidak valid (contoh: user@gmail.com).',
-        'email.unique'      => 'Email sudah terdaftar.',
-        'password.required' => 'Password tidak boleh kosong.',
-        'password.min'      => 'Password minimal 6 karakter.',
-        'role.required'     => 'Silakan pilih role.',
-    ]);
+    {
+        $request->validate([
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|unique:users,email',
+            'password' => 'nullable|min:6',
+            'role'     => 'required|in:admin,guru,siswa',
+        ], [
+            'name.required'     => 'Nama lengkap wajib diisi.',
+            'email.required'    => 'Email wajib diisi.',
+            'email.email'       => 'Format email tidak valid (contoh: user@gmail.com).',
+            'email.unique'      => 'Email sudah terdaftar.',
+            'password.min'      => 'Password minimal 6 karakter.',
+            'role.required'     => 'Silakan pilih role.',
+        ]);
 
-    User::create([
-        'name'     => $request->name,
-        'email'    => $request->email,
-        'password' => bcrypt($request->password),
-        'role'     => $request->role,
-    ]);
+        // Jika password kosong dan role guru, gunakan default 'gurusmk123'
+        $passwordPlain = $request->password;
+        if (empty($passwordPlain)) {
+            if ($request->role === 'guru') {
+                $passwordPlain = 'gurusmk123';
+            } else {
+                return back()->withErrors(['password' => 'Password tidak boleh kosong untuk role ini.'])->withInput();
+            }
+        }
 
-    return back()->with('success', 'User berhasil dibuat!');
-}
+        User::create([
+            'name'     => $request->name,
+            'email'    => $request->email,
+            'password' => bcrypt($passwordPlain),
+            'role'     => $request->role,
+        ]);
+
+        return back()->with('success', 'User berhasil dibuat!');
+    }
 
     public function update(Request $request, User $user)
     {

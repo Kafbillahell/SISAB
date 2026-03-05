@@ -129,12 +129,11 @@
                     
                     <div class="form-group">
                         <label>Guru</label>
-                        <select name="guru_id" class="form-control" required>
-                            <option value="">-- Pilih Guru --</option>
-                            @foreach($gurus as $g)
-                                <option value="{{ $g->id }}">{{ $g->nama_guru }}</option>
-                            @endforeach
-                        </select>
+                        <input type="hidden" name="guru_id" id="modal-guru-id" required>
+                        <div id="guru-list" class="border rounded p-2" style="max-height:220px; overflow:auto;">
+                            {{-- JS will render guru list with availability badges here --}}
+                        </div>
+                        <small class="form-text text-muted">Warna badge di kanan menunjukkan apakah guru siap (hijau) atau sibuk (merah) pada hari & sesi terpilih.</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -151,11 +150,14 @@
     .slot-filled { background: #ffffff !important; border: 1px solid #4e73df !important; border-left: 4px solid #4e73df !important; align-items: flex-start; padding: 10px !important; cursor: default; }
     .btn-delete-slot { opacity: 0; transition: 0.2s; }
     .slot-filled:hover .btn-delete-slot { opacity: 1; }
+    #guru-list .selected { background: rgba(78,115,223,0.06); border-left: 4px solid #4e73df; }
+    #guru-list .badge { font-weight:600; }
 </style>
 
 <script>
     // 1. Data dari Laravel
     const allJadwals = @json($jadwals);
+    const allGurus = @json($gurus);
     const sessionOpenRombelId = "{{ session('open_rombel') }}";
     
     // PENTING: Map ID ke Nama agar JS bisa buka otomatis
@@ -221,7 +223,68 @@
         document.getElementById('modal-hari').value = hari;
         document.getElementById('modal-sesi-id').value = sesiId;
         document.getElementById('modal-waktu-label').value = jamMulai.substring(0, 5) + ' - ' + jamSelesai.substring(0, 5);
+        renderGuruListForSlot(hari, jamMulai, jamSelesai);
         $('#addModal').modal('show');
+    }
+
+    function timeToMinutes(t) {
+        // t = 'HH:MM:SS' or 'HH:MM'
+        const parts = t.split(':');
+        return parseInt(parts[0], 10) * 60 + parseInt(parts[1] || '0', 10);
+    }
+
+    function overlaps(startA, endA, startB, endB) {
+        return (startA < endB) && (endA > startB);
+    }
+
+    function renderGuruListForSlot(hari, jamMulai, jamSelesai) {
+        const container = document.getElementById('guru-list');
+        container.innerHTML = '';
+        const start = timeToMinutes(jamMulai.substring(0,5));
+        const end = timeToMinutes(jamSelesai.substring(0,5));
+
+        allGurus.forEach(g => {
+            // Determine if guru busy: any jadwal with same hari and overlapping time
+            const busy = allJadwals.some(j => {
+                if (!j.guru_id) return false;
+                if (j.hari !== hari) return false;
+                const s = timeToMinutes(j.jam_mulai.substring(0,5));
+                const e = timeToMinutes(j.jam_selesai.substring(0,5));
+                return overlaps(start, end, s, e);
+            }) && allJadwals.some(j => j.guru_id == g.id && j.hari === hari && overlaps(start, end, timeToMinutes(j.jam_mulai.substring(0,5)), timeToMinutes(j.jam_selesai.substring(0,5))));
+
+            const item = document.createElement('div');
+            item.className = 'd-flex align-items-center justify-content-between p-2';
+            item.style.cursor = 'pointer';
+            item.innerHTML = `
+                <div>
+                    <div class="font-weight-bold">${g.nama_guru}</div>
+                    <div class="small text-muted">${g.nip ?? ''}</div>
+                </div>
+                <div class="text-right">
+                    <span class="badge ${busy ? 'badge-danger' : 'badge-success'}" style="min-width:70px;">${busy ? 'SIBUK' : 'SIAP'}</span>
+                </div>`;
+
+            item.addEventListener('click', () => {
+                // if busy, still allow selection but warn by briefly flashing
+                document.getElementById('modal-guru-id').value = g.id;
+                // mark selection visually
+                container.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+                item.classList.add('selected');
+            });
+
+            container.appendChild(item);
+        });
+
+        // Auto-select first available guru if none selected
+        const firstAvail = Array.from(container.children).find(ch => ch.querySelector('.badge').classList.contains('badge-success'));
+        if (firstAvail) {
+            firstAvail.classList.add('selected');
+            const idx = Array.from(container.children).indexOf(firstAvail);
+            if (allGurus[idx]) {
+                document.getElementById('modal-guru-id').value = allGurus[idx].id;
+            }
+        }
     }
 
     function showKelas() {
