@@ -233,7 +233,12 @@ class ManualPresensiController extends Controller
             }
         }
 
-        return redirect()->back()->with('success', 'Data presensi manual berhasil disimpan.');
+        // Redirect to index route with query params so the page reloads and shows saved statuses
+        return redirect()->route('presensi.manual', [
+            'rombel_id' => $request->rombel_id,
+            'tanggal' => $request->tanggal,
+            'jadwal_id' => $jadwalId
+        ])->with('success', 'Data presensi manual berhasil disimpan.');
     }
 
     private function getHariIndo($day)

@@ -149,7 +149,8 @@
     let students = [];
     async function fetchStudentsForRombel(rombelId) {
         try {
-            const resp = await fetch(`{{ url('/presensi/daftar-siswa') }}/${rombelId}`);
+            const jadwalQuery = "{{ $jadwalAktif->id ?? '' }}" ? `?jadwal_id={{ $jadwalAktif->id }}` : '';
+            const resp = await fetch(`{{ url('/presensi/daftar-siswa') }}/${rombelId}${jadwalQuery}`);
             const json = await resp.json();
             students = json.data || [];
         } catch (e) {
@@ -205,6 +206,13 @@
                         // KUNCI: Hanya proses jika wajah dikenal di rombel ini
                         if (bestMatch.label !== 'unknown') {
                             const [nama, id] = bestMatch.label.split('|');
+                            // Check local presensi info first: if manual presensi exists, show warning and skip
+                            const found = students.find(s => String(s.id) === String(id));
+                            if (found && found.presensi && found.presensi.is_manual) {
+                                const ket = found.presensi.keterangan || 'Izin/Sakit';
+                                showManualWarning(`${nama} sudah ${ket} (manual). Tidak dapat absen otomatis.`);
+                                return;
+                            }
                             handleAbsensi(id, nama);
                         } else {
                             // Feedback jika wajah ada tapi bukan siswa kelas ini
@@ -283,6 +291,22 @@
             result.className = "badge badge-primary shadow-lg px-4 py-3";
             result.innerHTML = '<i class="fas fa-user-shield mr-2"></i> Memindai Wajah...';
         }, 5000);
+    }
+    // Show manual-presence warning (when siswa has Izin/Sakit/Alpa)
+    function showManualWarning(pesan) {
+        isProcessing = true;
+        result.className = "badge badge-danger shadow-lg px-4 py-3";
+        result.innerHTML = `<i class="fas fa-user-times mr-2"></i> ${pesan}`;
+        scannerWrapper.style.borderColor = "#dc3545";
+        let audio = new Audio('https://assets.mixkit.co/active_storage/sfx/1664/1664-preview.mp3');
+        audio.volume = 0.2;
+        audio.play();
+        setTimeout(() => {
+            isProcessing = false;
+            result.className = "badge badge-primary shadow-lg px-4 py-3";
+            result.innerHTML = '<i class="fas fa-user-shield mr-2"></i> Memindai Wajah...';
+            scannerWrapper.style.borderColor = "#fff";
+        }, 3000);
     }
     
     initAI();

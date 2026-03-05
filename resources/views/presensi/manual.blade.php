@@ -43,14 +43,14 @@
                 <div class="form-row align-items-end mb-3">
                     <div class="col-md-3">
                         <label class="small">Tanggal</label>
-                        <input type="date" name="tanggal" class="form-control" value="{{ old('tanggal', date('Y-m-d')) }}">
+                        <input type="date" name="tanggal" class="form-control" value="{{ old('tanggal', $selectedTanggal ?? date('Y-m-d')) }}">
                     </div>
                     <div class="col-md-5">
                         <label class="small">Pilih Jadwal (Hari ini)</label>
                         <select name="jadwal_id" class="form-control">
                             <option value="">-- Pilih Jadwal --</option>
                             @foreach($jadwals as $j)
-                                <option value="{{ $j->id }}" {{ ($defaultJadwalId == $j->id) ? 'selected' : '' }}>
+                                <option value="{{ $j->id }}" {{ (isset($selectedJadwal) && $selectedJadwal == $j->id) ? 'selected' : '' }}>
                                     {{ $j->hari }} - {{ $j->mapel->nama_mapel }} - {{ $j->guru->nama_guru }} ({{ $j->jam_mulai }}-{{ $j->jam_selesai }})
                                 </option>
                             @endforeach
