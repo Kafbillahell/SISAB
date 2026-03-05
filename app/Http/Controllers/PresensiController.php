@@ -185,6 +185,49 @@ class PresensiController extends Controller
     ]);
 }
 
+    /**
+     * AJAX: Return siswa list (id, nama_siswa, foto URL) for a rombel (only students in rombel)
+     */
+    public function daftarSiswa(Request $request, $rombelId)
+    {
+        $jadwalId = $request->query('jadwal_id');
+
+        $siswas = \DB::table('anggota_rombels')
+            ->join('siswas', 'anggota_rombels.siswa_id', '=', 'siswas.id')
+            ->where('anggota_rombels.rombel_id', $rombelId)
+            ->whereNotNull('siswas.foto')
+            ->get(['siswas.id', 'siswas.nama_siswa', 'siswas.foto']);
+
+        $today = Carbon::today();
+
+        $result = $siswas->map(function($s) use ($jadwalId, $today) {
+            $presensi = \App\Models\Presensi::where('siswa_id', $s->id)
+                ->whereDate('waktu_scan', $today)
+                ->when($jadwalId, function($q) use ($jadwalId) {
+                    return $q->where('jadwal_id', $jadwalId);
+                })->latest('waktu_scan')->first();
+
+            $presensiData = null;
+            if ($presensi) {
+                $k = trim((string)$presensi->keterangan);
+                $isManual = in_array($k, ['Izin', 'Sakit', 'Alpa']);
+                $presensiData = [
+                    'keterangan' => $k,
+                    'is_manual' => $isManual
+                ];
+            }
+
+            return [
+                'id' => $s->id,
+                'nama' => $s->nama_siswa,
+                'foto' => asset('storage/' . $s->foto),
+                'presensi' => $presensiData
+            ];
+        })->values();
+
+        return response()->json(['data' => $result]);
+    }
+
     public function store(Request $request)
     {
         $siswaId = $request->siswa_id;
@@ -209,13 +252,22 @@ class PresensiController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Sesi absen sudah berakhir atau tidak sesuai hari!'], 403);
         }
 
-        $sudahAbsen = Presensi::where('siswa_id', $siswaId)
+        $existing = Presensi::where('siswa_id', $siswaId)
             ->where('jadwal_id', $jadwalId)
             ->whereDate('waktu_scan', Carbon::today())
             ->first();
 
-        if ($sudahAbsen) {
-            return response()->json(['status' => 'exists', 'message' => 'Sudah absen hari ini!']);
+        if ($existing) {
+            $keterangan = strtolower(trim((string)($existing->keterangan ?? '')));
+            $status = strtolower(trim((string)($existing->status ?? '')));
+
+            // Jika sudah absen otomatis (keterangan = Hadir), beri tahu sudah exists
+            if ($keterangan === 'hadir' || $status === 'hadir') {
+                return response()->json(['status' => 'exists', 'message' => 'Sudah absen hari ini!']);
+            }
+
+            // Jika ada presensi manual (Izin/Sakit/Alpa), blokir absen otomatis
+            return response()->json(['status' => 'blocked', 'message' => 'Terdaftar presensi manual untuk siswa ini. Tidak bisa absen otomatis.'], 409);
         }
 
         Presensi::create([

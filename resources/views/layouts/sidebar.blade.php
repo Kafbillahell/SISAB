@@ -95,6 +95,12 @@
             <span>Rekap Absensi</span></a>
     </li>
 
+    <li class="nav-item {{ request()->is('presensi/manual*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('presensi.manual') }}">
+            <i class="fas fa-fw fa-edit"></i>
+            <span>Input Manual</span></a>
+    </li>
+
     <hr class="sidebar-divider d-none d-md-block">
 
     <div class="text-center d-none d-md-inline">

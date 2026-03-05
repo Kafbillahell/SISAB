@@ -1,0 +1,279 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Rombel;
+use App\Models\Guru;
+use App\Models\AnggotaRombel;
+use App\Models\Siswa;
+use App\Models\Presensi;
+use App\Models\Jadwal;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
+class ManualPresensiController extends Controller
+{
+    public function index(Request $request)
+    {
+        $user = auth()->user();
+        $selectedRombel = null;
+
+        // Tentukan daftar kelas yang boleh dipilih: jika guru -> hanya kelas yang dia wali atau mengajar
+        if ($user && $user->role === 'guru') {
+            $guru = Guru::where('user_id', $user->id)->first();
+            if ($guru) {
+                $waliIds = Rombel::where('guru_id', $guru->id)->pluck('id')->toArray();
+                $teachingIds = Jadwal::where('guru_id', $guru->id)->pluck('rombel_id')->toArray();
+                $ids = array_unique(array_merge($waliIds, $teachingIds));
+                $rombels = Rombel::whereIn('id', $ids)->get();
+            } else {
+                $rombels = collect();
+            }
+        } else {
+            $rombels = Rombel::all();
+        }
+
+        // Jika user adalah guru, cari informasi guru dan otomatis pilih rombel
+        if ($user && $user->role === 'guru') {
+            $guru = Guru::where('user_id', $user->id)->first();
+            if ($guru) {
+                // Prioritas: jika guru sedang mengajar sekarang, buka rombel tempat dia mengajar
+                $now = Carbon::now()->setTimezone('Asia/Jakarta');
+                $hariNow = $this->getHariIndo($now->format('l'));
+                $timeNow = $now->format('H:i:s');
+
+                $activeJadwal = Jadwal::where('guru_id', $guru->id)
+                    ->where('hari', $hariNow)
+                    ->where('jam_mulai', '<=', $timeNow)
+                    ->where('jam_selesai', '>=', $timeNow)
+                    ->first();
+
+                if ($activeJadwal) {
+                    $selectedRombel = Rombel::find($activeJadwal->rombel_id);
+                } else {
+                    // Jika tidak sedang mengajar, fallback ke rombel yang dia wali (jika ada)
+                    $selectedRombel = Rombel::where('guru_id', $guru->id)->first();
+                }
+            }
+        }
+
+        // Jika admin atau request memilih rombel
+        if ($request->filled('rombel_id')) {
+            $selectedRombel = Rombel::find($request->rombel_id);
+        }
+
+        // Jika user adalah guru (wali kelas) dan memiliki rombel, otomatis buka kelasnya
+        if ($user && $user->role === 'guru' && $selectedRombel && ! $request->filled('rombel_id')) {
+            return redirect()->route('presensi.manual', ['rombel_id' => $selectedRombel->id]);
+        }
+
+        $siswas = collect();
+        $jadwals = collect();
+        $defaultJadwalId = null;
+        $jadwal_locked = false;
+        $lockedJadwalId = null;
+
+        // Pilihan tanggal (default hari ini) dan jadwal terpilih (dari request atau default)
+        $selectedTanggal = $request->tanggal ?? date('Y-m-d');
+
+        // Derive rombel id from selected model or request param to be more robust
+        $rombelId = null;
+        if ($selectedRombel && isset($selectedRombel->id)) {
+            $rombelId = $selectedRombel->id;
+        } elseif ($request->filled('rombel_id')) {
+            $rombelId = $request->rombel_id;
+            // ensure selectedRombel is a model for view usage
+            if (! $selectedRombel) {
+                $selectedRombel = Rombel::find($rombelId);
+            }
+        }
+
+        if ($rombelId) {
+            $siswas = DB::table('anggota_rombels')
+                ->join('siswas', 'anggota_rombels.siswa_id', '=', 'siswas.id')
+                ->where('anggota_rombels.rombel_id', $rombelId)
+                ->select('siswas.id', 'siswas.nama_siswa', 'siswas.foto')
+                ->get();
+
+            // Hanya tampilkan jadwal yang berjalan pada tanggal yang dipilih untuk rombel tersebut
+            $hariIndo = $this->getHariIndo(Carbon::parse($selectedTanggal)->format('l'));
+
+            $jadwalQuery = Jadwal::where('rombel_id', $rombelId)
+                ->where('hari', $hariIndo)
+                ->with('mapel', 'guru');
+
+            // Jika user adalah guru, batasi ke jadwal yang dia ajarkan
+            if ($user && $user->role === 'guru') {
+                $guru = Guru::where('user_id', $user->id)->first();
+                if ($guru) {
+                    $jadwalQuery->where('guru_id', $guru->id);
+                }
+            }
+
+            $jadwals = $jadwalQuery->get();
+            $defaultJadwalId = $jadwals->first()->id ?? null;
+
+            // Tentukan apakah jadwal harus dikunci untuk guru yang sedang mengajar
+            $jadwal_locked = false;
+            $lockedJadwalId = null;
+            if ($user && $user->role === 'guru') {
+                // Jika tanggal yang dipilih adalah hari ini, cek jadwal yang sedang berjalan berdasarkan waktu
+                if ($selectedTanggal == date('Y-m-d')) {
+                    $nowTime = Carbon::now()->setTimezone('Asia/Jakarta')->format('H:i:s');
+                    $active = $jadwals->first(function($j) use ($nowTime) {
+                        return ($j->jam_mulai <= $nowTime) && ($j->jam_selesai >= $nowTime);
+                    });
+                    if ($active) {
+                        $jadwal_locked = true;
+                        $lockedJadwalId = $active->id;
+                    }
+                }
+
+                // Jika tidak ada jadwal aktif tetapi hanya ada satu jadwal di daftar, kunci ke jadwal itu
+                if (! $jadwal_locked && $jadwals->count() == 1) {
+                    $jadwal_locked = true;
+                    $lockedJadwalId = $jadwals->first()->id;
+                }
+            } else {
+                $jadwal_locked = false;
+            }
+        }
+
+        // Pilihan tanggal (default hari ini) dan jadwal terpilih (dari request atau default)
+        $selectedTanggal = $request->tanggal ?? date('Y-m-d');
+        $selectedJadwal = $request->jadwal_id ?? $defaultJadwalId;
+        // Jika jadwal dikunci, gunakan jadwal yang dikunci
+        if (isset($jadwal_locked) && $jadwal_locked && isset($lockedJadwalId)) {
+            $selectedJadwal = $lockedJadwalId;
+        }
+
+        // Ambil presensi yang sudah tersimpan untuk tanggal dan jadwal tersebut (status + keterangan)
+        $presensiMap = [];
+        if ($selectedJadwal) {
+            $rows = Presensi::where('jadwal_id', $selectedJadwal)
+                ->whereDate('waktu_scan', $selectedTanggal)
+                ->get(['siswa_id', 'status', 'keterangan']);
+
+            foreach ($rows as $r) {
+                $presensiMap[$r->siswa_id] = [
+                    'status' => $r->status,
+                    'keterangan' => $r->keterangan,
+                ];
+            }
+        }
+
+        return view('presensi.manual', compact(
+            'rombels', 'selectedRombel', 'siswas', 'jadwals', 'defaultJadwalId', 'selectedTanggal', 'selectedJadwal', 'presensiMap', 'jadwal_locked', 'lockedJadwalId'
+        ));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'rombel_id' => 'required|exists:rombels,id',
+            'tanggal' => 'required|date',
+            'jadwal_id' => 'nullable|exists:jadwals,id',
+            'status' => 'array',
+        ]);
+
+        $tanggal = Carbon::parse($request->tanggal)->startOfDay();
+        $jadwalId = $request->jadwal_id;
+
+        // Jika jadwal_id tidak diberikan, coba ambil jadwal hari ini untuk rombel dan guru (jika wali)
+        if (empty($jadwalId)) {
+            $hariIndo = $this->getHariIndo($tanggal->format('l'));
+            $jadwalQuery = Jadwal::where('rombel_id', $request->rombel_id)
+                ->where('hari', $hariIndo);
+
+            $user = auth()->user();
+            if ($user && $user->role === 'guru') {
+                $guru = Guru::where('user_id', $user->id)->first();
+                if ($guru) $jadwalQuery->where('guru_id', $guru->id);
+            }
+
+            $jadwal = $jadwalQuery->first();
+            if ($jadwal) $jadwalId = $jadwal->id;
+        }
+
+        if (empty($jadwalId)) {
+            return redirect()->back()->withInput()->withErrors(['jadwal_id' => 'Tidak ada jadwal yang cocok untuk tanggal/kelas ini. Silakan pilih jadwal terlebih dahulu.']);
+        }
+
+        foreach ($request->input('status', []) as $siswaId => $stat) {
+            if (empty($stat)) continue;
+
+            // Normalize keterangan
+            $stat = trim((string)$stat);
+            $waktu = $tanggal->copy()->addHours(8); // jam default 08:00
+
+            // Use transaction + row lock to avoid duplicate inserts on concurrent requests
+            DB::transaction(function() use ($siswaId, $jadwalId, $tanggal, $stat, $waktu) {
+                // Prefer existing record for same jadwal
+                $existing = Presensi::where('siswa_id', $siswaId)
+                    ->where('jadwal_id', $jadwalId)
+                    ->whereDate('waktu_scan', $tanggal->format('Y-m-d'))
+                    ->lockForUpdate()
+                    ->first();
+
+                // If not found, try to find any manual presensi today for this siswa (so edits update same row)
+                if (! $existing) {
+                    $existing = Presensi::where('siswa_id', $siswaId)
+                        ->whereDate('waktu_scan', $tanggal->format('Y-m-d'))
+                        ->whereIn('keterangan', ['Izin', 'Sakit', 'Alpa'])
+                        ->lockForUpdate()
+                        ->first();
+                }
+
+                if ($existing) {
+                    $existingKeterangan = trim((string)($existing->keterangan ?? ''));
+                    $existingLower = strtolower($existingKeterangan);
+                    $newLower = strtolower($stat);
+
+                    // If already automatic hadir, never overwrite
+                    if ($existingLower === 'hadir') {
+                        return; // skip
+                    }
+
+                    // If existing manual is same as new input, do nothing (idempotent)
+                    if ($existingLower === $newLower) {
+                        return; // skip duplicate
+                    }
+
+                    // Update existing manual record (allow changing Alpa->Sakit, etc.)
+                    $existing->update([
+                        'waktu_scan' => $waktu,
+                        'status' => $stat,
+                        'keterangan' => $stat,
+                        'jadwal_id' => $jadwalId
+                    ]);
+                } else {
+                    // Create new manual presensi
+                    Presensi::create([
+                        'siswa_id' => $siswaId,
+                        'jadwal_id' => $jadwalId,
+                        'waktu_scan' => $waktu,
+                        'status' => $stat,
+                        'keterangan' => $stat
+                    ]);
+                }
+            });
+        }
+
+        // Redirect to index route with query params so the page reloads and shows saved statuses
+        return redirect()->route('presensi.manual', [
+            'rombel_id' => $request->rombel_id,
+            'tanggal' => $request->tanggal,
+            'jadwal_id' => $jadwalId
+        ])->with('success', 'Data presensi manual berhasil disimpan.');
+    }
+
+    private function getHariIndo($day)
+    {
+        $map = [
+            'Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu',
+            'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Minggu'
+        ];
+        return $map[$day] ?? $day;
+    }
+}

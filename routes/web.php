@@ -81,4 +81,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/presensi', [PresensiController::class, 'index'])->name('presensi.index');
     Route::get('/presensi/scanner', [PresensiController::class, 'scanner'])->name('presensi.scanner');
     Route::post('/presensi/store', [PresensiController::class, 'store'])->name('presensi.store');
+    Route::get('/presensi/daftar-siswa/{rombel}', [PresensiController::class, 'daftarSiswa'])->name('presensi.daftarSiswa');
+    // Manual input untuk wali kelas: Sakit / Izin / Alpa
+    Route::get('/presensi/manual', [\App\Http\Controllers\ManualPresensiController::class, 'index'])->name('presensi.manual');
+    Route::post('/presensi/manual', [\App\Http\Controllers\ManualPresensiController::class, 'store'])->name('presensi.manual.store');
 });

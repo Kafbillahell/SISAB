@@ -38,26 +38,36 @@ class JadwalController extends Controller
 
         $sesiDipilih = Sesi::find($request->sesi_id);
 
-        // Cek bentrok Rombel
+        // Gunakan rentang waktu dari sesi untuk cek overlap (lebih aman daripada hanya sesi_id)
+        $start = $sesiDipilih->jam_mulai;
+        $end = $sesiDipilih->jam_selesai;
+
+        // Cek bentrok Rombel (pada hari yang sama) berdasarkan overlap waktu
         $cekSlot = Jadwal::where('rombel_id', $request->rombel_id)
-            ->where('sesi_id', $request->sesi_id)
             ->where('hari', $request->hari)
-            ->first();
+            ->where(function($q) use ($start, $end) {
+                $q->where(function($q2) use ($start, $end) {
+                    $q2->where('jam_mulai', '<', $end)
+                       ->where('jam_selesai', '>', $start);
+                });
+            })->first();
 
         if ($cekSlot) {
             return redirect()->route('jadwal.index')
-                ->with(['error' => "Gagal! Rombel sudah memiliki jadwal di sesi tersebut.", 'open_rombel' => $request->rombel_id]);
+                ->with(['error' => "Gagal! Rombel sudah memiliki jadwal yang waktunya bertumpuk.", 'open_rombel' => $request->rombel_id]);
         }
 
-        // Cek bentrok Guru
+        // Cek bentrok Guru (pada hari yang sama) berdasarkan overlap waktu
         $bentrokGuru = Jadwal::where('hari', $request->hari)
             ->where('guru_id', $request->guru_id)
-            ->where('sesi_id', $request->sesi_id)
-            ->first();
+            ->where(function($q) use ($start, $end) {
+                $q->where('jam_mulai', '<', $end)
+                  ->where('jam_selesai', '>', $start);
+            })->first();
 
         if ($bentrokGuru) {
             return redirect()->route('jadwal.index')
-                ->with(['error' => "Gagal! Guru sudah terjadwal di kelas lain.", 'open_rombel' => $request->rombel_id]);
+                ->with(['error' => "Gagal! Guru sudah terjadwal pada waktu yang sama.", 'open_rombel' => $request->rombel_id]);
         }
 
         Jadwal::create([
