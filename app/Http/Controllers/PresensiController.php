@@ -138,12 +138,21 @@ class PresensiController extends Controller
                 ->first();
 
             if ($anggotaRombel) {
-                // Cari jadwal yang sedang jalan di rombel siswa tersebut
+                // Strategi pencarian jadwal untuk siswa:
+                // 1. Cari jadwal yang SEDANG BERJALAN (jam_mulai <= sekarang <= jam_selesai) di hari ini
                 $jadwalAktif = \App\Models\Jadwal::where('rombel_id', $anggotaRombel->rombel_id)
                     ->where('hari', $hariIndo)
                     ->whereTime('jam_mulai', '<=', $jamSekarang)
                     ->whereTime('jam_selesai', '>=', $jamSekarang)
                     ->first();
+                
+                // 2. Jika tidak ada jadwal aktif hari ini, tampilkan jadwal PERTAMA hari ini (untuk siswa bisa scan lebih awal)
+                if (!$jadwalAktif) {
+                    $jadwalAktif = \App\Models\Jadwal::where('rombel_id', $anggotaRombel->rombel_id)
+                        ->where('hari', $hariIndo)
+                        ->orderBy('jam_mulai', 'asc')
+                        ->first();
+                }
                 
                 if ($jadwalAktif) {
                     $targetGuruId = $jadwalAktif->guru_id;
@@ -254,22 +263,25 @@ class PresensiController extends Controller
 
         $todayForCheck = Carbon::today()->setTimezone('Asia/Jakarta')->format('Y-m-d');
 
-        $existing = Presensi::where('siswa_id', $siswaId)
+        // Cek 1: Apakah ada presensi HADIR untuk jadwal spesifik hari ini?
+        $existingHadir = Presensi::where('siswa_id', $siswaId)
             ->where('jadwal_id', $jadwalId)
             ->whereDate('waktu_scan', $todayForCheck)
+            ->whereIn('keterangan', ['Hadir', 'hadir'])
             ->first();
 
-        if ($existing) {
-            $keterangan = strtolower(trim((string)($existing->keterangan ?? '')));
-            $status = strtolower(trim((string)($existing->status ?? '')));
+        if ($existingHadir) {
+            return response()->json(['status' => 'exists', 'message' => 'Siswa sudah absen.']);
+        }
 
-            // Jika sudah absen otomatis (keterangan = Hadir), beri tahu sudah exists
-            if ($keterangan === 'hadir' || $status === 'hadir') {
-                return response()->json(['status' => 'exists', 'message' => 'Siswa sudah absen.']);
-            }
+        // Cek 2: Apakah ada presensi MANUAL (Izin/Sakit/Alpa) untuk siswa INI hari ini (SEMUA jadwal)?
+        $existingManual = Presensi::where('siswa_id', $siswaId)
+            ->whereDate('waktu_scan', $todayForCheck)
+            ->whereIn('keterangan', ['Izin', 'Sakit', 'Alpa', 'izin', 'sakit', 'alpa'])
+            ->first();
 
-            // Jika ada presensi manual (Izin/Sakit/Alpa), blokir absen otomatis
-            return response()->json(['status' => 'blocked', 'message' => 'Terdaftar presensi manual untuk siswa ini. Tidak bisa absen otomatis.'], 409);
+        if ($existingManual) {
+            return response()->json(['status' => 'blocked', 'message' => 'Sudah ada data masuk'], 409);
         }
 
         // Gunakan kunci bernama MySQL agar operasi insert serial (menghindari race condition)
