@@ -63,7 +63,7 @@ class PresensiController extends Controller
                 })
                 ->whereBetween('waktu_scan', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
                 ->selectRaw('DATE(waktu_scan) as tanggal, jadwal_id')
-                ->groupBy('tanggal', 'jadwal_id')
+                ->groupByRaw('DATE(waktu_scan), jadwal_id')
                 ->get()
                 ->count();
 
@@ -138,12 +138,21 @@ class PresensiController extends Controller
                 ->first();
 
             if ($anggotaRombel) {
-                // Cari jadwal yang sedang jalan di rombel siswa tersebut
+                // Strategi pencarian jadwal untuk siswa:
+                // 1. Cari jadwal yang SEDANG BERJALAN (jam_mulai <= sekarang <= jam_selesai) di hari ini
                 $jadwalAktif = \App\Models\Jadwal::where('rombel_id', $anggotaRombel->rombel_id)
                     ->where('hari', $hariIndo)
                     ->whereTime('jam_mulai', '<=', $jamSekarang)
                     ->whereTime('jam_selesai', '>=', $jamSekarang)
                     ->first();
+                
+                // 2. Jika tidak ada jadwal aktif hari ini, tampilkan jadwal PERTAMA hari ini (untuk siswa bisa scan lebih awal)
+                if (!$jadwalAktif) {
+                    $jadwalAktif = \App\Models\Jadwal::where('rombel_id', $anggotaRombel->rombel_id)
+                        ->where('hari', $hariIndo)
+                        ->orderBy('jam_mulai', 'asc')
+                        ->first();
+                }
                 
                 if ($jadwalAktif) {
                     $targetGuruId = $jadwalAktif->guru_id;
@@ -198,7 +207,7 @@ class PresensiController extends Controller
             ->whereNotNull('siswas.foto')
             ->get(['siswas.id', 'siswas.nama_siswa', 'siswas.foto']);
 
-        $today = Carbon::today();
+        $today = Carbon::today()->setTimezone('Asia/Jakarta');
 
         $result = $siswas->map(function($s) use ($jadwalId, $today) {
             $presensi = \App\Models\Presensi::where('siswa_id', $s->id)
@@ -252,32 +261,86 @@ class PresensiController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Sesi absen sudah berakhir atau tidak sesuai hari!'], 403);
         }
 
-        $existing = Presensi::where('siswa_id', $siswaId)
+        $todayForCheck = Carbon::today()->setTimezone('Asia/Jakarta')->format('Y-m-d');
+
+        // Cek 1: Apakah ada presensi HADIR untuk jadwal spesifik hari ini?
+        $existingHadir = Presensi::where('siswa_id', $siswaId)
             ->where('jadwal_id', $jadwalId)
-            ->whereDate('waktu_scan', Carbon::today())
+            ->whereDate('waktu_scan', $todayForCheck)
+            ->whereIn('keterangan', ['Hadir', 'hadir'])
             ->first();
 
-        if ($existing) {
-            $keterangan = strtolower(trim((string)($existing->keterangan ?? '')));
-            $status = strtolower(trim((string)($existing->status ?? '')));
-
-            // Jika sudah absen otomatis (keterangan = Hadir), beri tahu sudah exists
-            if ($keterangan === 'hadir' || $status === 'hadir') {
-                return response()->json(['status' => 'exists', 'message' => 'Sudah absen hari ini!']);
-            }
-
-            // Jika ada presensi manual (Izin/Sakit/Alpa), blokir absen otomatis
-            return response()->json(['status' => 'blocked', 'message' => 'Terdaftar presensi manual untuk siswa ini. Tidak bisa absen otomatis.'], 409);
+        if ($existingHadir) {
+            return response()->json(['status' => 'exists', 'message' => 'Siswa sudah absen.']);
         }
 
-        Presensi::create([
-            'siswa_id' => $siswaId,
-            'jadwal_id' => $jadwalId,
-            'waktu_scan' => now()->setTimezone('Asia/Jakarta'),
-            'keterangan' => 'Hadir'
-        ]);
+        // Cek 2: Apakah ada presensi MANUAL (Izin/Sakit/Alpa) untuk siswa INI hari ini (SEMUA jadwal)?
+        $existingManual = Presensi::where('siswa_id', $siswaId)
+            ->whereDate('waktu_scan', $todayForCheck)
+            ->whereIn('keterangan', ['Izin', 'Sakit', 'Alpa', 'izin', 'sakit', 'alpa'])
+            ->first();
 
-        return response()->json(['status' => 'success', 'message' => 'Absensi berhasil dicatat!']);
+        if ($existingManual) {
+            return response()->json(['status' => 'blocked', 'message' => 'Sudah ada data masuk'], 409);
+        }
+
+        // Gunakan kunci bernama MySQL agar operasi insert serial (menghindari race condition)
+        $lockName = "presensi_{$siswaId}_{$jadwalId}_{$todayForCheck}";
+        $gotLock = DB::select('SELECT GET_LOCK(?, 5) as got', [$lockName]);
+        $acquired = isset($gotLock[0]) && (int)($gotLock[0]->got ?? $gotLock[0]->GET_LOCK) === 1;
+
+        try {
+            if (! $acquired) {
+                // Jika tidak dapat kunci, fallback cek eksistensi dan beri tahu
+                $nowExists = Presensi::where('siswa_id', $siswaId)
+                    ->where('jadwal_id', $jadwalId)
+                    ->whereDate('waktu_scan', $todayForCheck)
+                    ->exists();
+
+                if ($nowExists) {
+                    return response()->json(['status' => 'exists', 'message' => 'Siswa sudah absen.']);
+                }
+
+                return response()->json(['status' => 'error', 'message' => 'Gagal memperoleh kunci. Coba lagi.'], 423);
+            }
+
+            // Setelah memperoleh kunci, cek ulang apakah sudah ada presensi (mungkin dibuat paralel)
+            $nowExists = Presensi::where('siswa_id', $siswaId)
+                ->where('jadwal_id', $jadwalId)
+                ->whereDate('waktu_scan', $todayForCheck)
+                ->exists();
+
+            if ($nowExists) {
+                return response()->json(['status' => 'exists', 'message' => 'Siswa sudah absen.']);
+            }
+
+            // Insert record presensi (tangani kemungkinan unique constraint pada DB)
+            try {
+                Presensi::create([
+                    'siswa_id' => $siswaId,
+                    'jadwal_id' => $jadwalId,
+                    'waktu_scan' => now()->setTimezone('Asia/Jakarta'),
+                    'keterangan' => 'Hadir'
+                ]);
+
+                return response()->json(['status' => 'success', 'message' => 'Absensi berhasil dicatat!']);
+            } catch (\Illuminate\Database\QueryException $ex) {
+                // SQLSTATE 23000 (integrity constraint violation) likely duplicate unique index
+                $sqlState = $ex->getCode();
+                if (in_array($sqlState, ['23000', '23505'])) {
+                    return response()->json(['status' => 'exists', 'message' => 'Siswa sudah absen.']);
+                }
+
+                // Jika error lain, rethrow so it's visible in logs (but return JSON to client)
+                \Log::error('Presensi create failed: '.$ex->getMessage());
+                return response()->json(['status' => 'error', 'message' => 'Gagal mencatat absensi.'], 500);
+            }
+        } finally {
+            // Lepaskan kunci jika sempat diperoleh
+            if ($acquired) {
+                DB::select('SELECT RELEASE_LOCK(?)', [$lockName]);
+            }
+        }
     }
 
     private function getHariIndo($day)
