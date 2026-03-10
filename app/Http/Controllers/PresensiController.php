@@ -16,27 +16,43 @@ class PresensiController extends Controller
 {
     public function index(Request $request)
     {
-        $rombels = Rombel::all();
+        $user = auth()->user();
+        $guru = null;
+
+        if ($user->role == 'guru') {
+            $guru = Guru::where('user_id', $user->id)->first();
+            $rombelIds = Jadwal::where('guru_id', $guru->id)->pluck('rombel_id')->unique();
+            $rombels = Rombel::whereIn('id', $rombelIds)->get();
+        } else {
+            $rombels = Rombel::all();
+        }
+
         $mapels = collect();
         $presensis = collect();
         $siswa_stats = collect();
         $total_sesi = 0;
         $statistik_kelas = ['persentase_hadir' => 0];
 
-        if ($request->filled('rombel_id')) {
+        if ($request->filled('rombel_id') && $rombels->contains('id', $request->rombel_id)) {
             $rombelId = $request->rombel_id;
 
             // 1. Ambil daftar Mapel yang ada di jadwal rombel tersebut
-            $mapels = Mapel::whereHas('jadwals', function($q) use ($rombelId) {
+            $mapels = Mapel::whereHas('jadwals', function($q) use ($rombelId, $guru) {
                 $q->where('rombel_id', $rombelId);
+                if ($guru) {
+                    $q->where('guru_id', $guru->id);
+                }
             })->get();
 
             // 2. Filter Log Presensi Utama
             $query = Presensi::with(['siswa', 'jadwal.mapel']);
-            $query->whereHas('jadwal', function($q) use ($request, $rombelId) {
+            $query->whereHas('jadwal', function($q) use ($request, $rombelId, $guru) {
                 $q->where('rombel_id', $rombelId);
                 if ($request->filled('mapel_id')) {
                     $q->where('mapel_id', $request->mapel_id);
+                }
+                if ($guru) {
+                    $q->where('guru_id', $guru->id);
                 }
             });
 
@@ -55,10 +71,13 @@ class PresensiController extends Controller
             $siswas = Siswa::whereIn('id', $siswaIds)->get();
 
             // Hitung total sesi yang unik (berapa kali pertemuan terjadi)
-            $total_sesi = Presensi::whereHas('jadwal', function($q) use ($request, $rombelId) {
+            $total_sesi = Presensi::whereHas('jadwal', function($q) use ($request, $rombelId, $guru) {
                     $q->where('rombel_id', $rombelId);
                     if ($request->filled('mapel_id')) {
                         $q->where('mapel_id', $request->mapel_id);
+                    }
+                    if ($guru) {
+                        $q->where('guru_id', $guru->id);
                     }
                 })
                 ->whereBetween('waktu_scan', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
@@ -69,13 +88,16 @@ class PresensiController extends Controller
 
             $total_sesi_fixed = $total_sesi > 0 ? $total_sesi : 1;
 
-            $siswa_stats = $siswas->map(function($s) use ($request, $startDate, $endDate, $total_sesi_fixed, $rombelId) {
+            $siswa_stats = $siswas->map(function($s) use ($request, $startDate, $endDate, $total_sesi_fixed, $rombelId, $guru) {
                 $p_siswa = Presensi::where('siswa_id', $s->id)
                     ->whereBetween('waktu_scan', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-                    ->whereHas('jadwal', function($q) use ($request, $rombelId) {
+                    ->whereHas('jadwal', function($q) use ($request, $rombelId, $guru) {
                         $q->where('rombel_id', $rombelId);
                         if ($request->filled('mapel_id')) {
                             $q->where('mapel_id', $request->mapel_id);
+                        }
+                        if ($guru) {
+                            $q->where('guru_id', $guru->id);
                         }
                     })->get();
 
@@ -83,13 +105,16 @@ class PresensiController extends Controller
                 $persen = ($hadir / $total_sesi_fixed) * 100;
 
                 return (object)[
+                    'id' => $s->id,
                     'nama_siswa' => $s->nama_siswa,
                     'nisn' => $s->nisn,
                     'foto' => $s->foto,
                     'total_hadir' => $hadir,
-                    'total_izin' => $p_siswa->whereIn('keterangan', ['Izin', 'Sakit'])->count(),
+                    'total_izin' => $p_siswa->where('keterangan', 'Izin')->count(),
+                    'total_sakit' => $p_siswa->where('keterangan', 'Sakit')->count(),
                     'total_alpa' => $p_siswa->where('keterangan', 'Alpa')->count(),
-                    'persen' => round($persen, 1)
+                    'persen' => round($persen, 1),
+                    'detail' => $p_siswa->sortByDesc('waktu_scan')->values()
                 ];
             });
 

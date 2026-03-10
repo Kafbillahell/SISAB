@@ -134,11 +134,11 @@
                     <thead class="bg-light text-dark">
                         <tr class="text-center">
                             <th>Siswa</th>
-                            <th width="100">Hadir</th>
-                            <th width="100">Izin/Sakit</th>
-                            <th width="100">Alpa</th>
-                            <th width="150">Persentase</th>
-                            <th width="200">Visual Performance</th>
+                            <th width="70">Hadir</th>
+                            <th width="70">Izin</th>
+                            <th width="70">Sakit</th>
+                            <th width="70">Alpa</th>
+                            <th width="100">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -160,17 +160,74 @@
                             </td>
                             <td class="text-center font-weight-bold text-success">{{ $stat->total_hadir }}</td>
                             <td class="text-center text-info">{{ $stat->total_izin }}</td>
+                            <td class="text-center text-warning">{{ $stat->total_sakit }}</td>
                             <td class="text-center text-danger">{{ $stat->total_alpa }}</td>
                             <td class="text-center">
-                                <span class="badge badge-{{ $color }} px-3 py-2">
-                                    {{ $persen }}%
-                                </span>
-                            </td>
-                            <td>
-                                <div class="progress mt-2" style="height: 12px;">
-                                    <div class="progress-bar bg-{{ $color }}" role="progressbar" 
-                                        style="width: {{ $persen }}%" 
-                                        aria-valuenow="{{ $persen }}" aria-valuemin="0" aria-valuemax="100">
+                                <button type="button" class="btn btn-sm btn-primary shadow-sm" data-toggle="modal" data-target="#modalDetail{{ $stat->id }}">
+                                    <i class="fas fa-list"></i> Detail
+                                </button>
+                                
+                                {{-- Modal Detail --}}
+                                <div class="modal fade" id="modalDetail{{ $stat->id }}" tabindex="-1" role="dialog" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+                                        <div class="modal-content text-left">
+                                            <div class="modal-header bg-primary text-white">
+                                                <h5 class="modal-title"><i class="fas fa-user"></i> Detail Presensi: {{ $stat->nama_siswa }}</h5>
+                                                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <ul class="nav nav-pills nav-fill mb-3" id="pills-tab-{{ $stat->id }}" role="tablist">
+                                                    <li class="nav-item">
+                                                        <a class="nav-link active py-1 filter-btn text-secondary" data-target="TR-{{ $stat->id }}" data-filter="Semua" href="#">Semua ({{ count($stat->detail) }})</a>
+                                                    </li>
+                                                    <li class="nav-item">
+                                                        <a class="nav-link py-1 filter-btn text-secondary" data-target="TR-{{ $stat->id }}" data-filter="Hadir" href="#">Hadir ({{ $stat->total_hadir }})</a>
+                                                    </li>
+                                                    <li class="nav-item">
+                                                        <a class="nav-link py-1 filter-btn text-secondary" data-target="TR-{{ $stat->id }}" data-filter="Izin" href="#">Izin ({{ $stat->total_izin }})</a>
+                                                    </li>
+                                                    <li class="nav-item">
+                                                        <a class="nav-link py-1 filter-btn text-secondary" data-target="TR-{{ $stat->id }}" data-filter="Sakit" href="#">Sakit ({{ $stat->total_sakit }})</a>
+                                                    </li>
+                                                    <li class="nav-item">
+                                                        <a class="nav-link py-1 filter-btn text-secondary" data-target="TR-{{ $stat->id }}" data-filter="Alpa" href="#">Alpa ({{ $stat->total_alpa }})</a>
+                                                    </li>
+                                                </ul>
+                                                <div class="table-responsive">
+                                                    <table class="table table-bordered table-sm table-hover">
+                                                        <thead class="bg-light">
+                                                            <tr class="text-center">
+                                                                <th width="50">No</th>
+                                                                <th>Tanggal & Waktu</th>
+                                                                <th>Mata Pelajaran</th>
+                                                                <th>Status</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @forelse($stat->detail as $index => $d)
+                                                                <tr class="TR-{{ $stat->id }}" data-status="{{ $d->keterangan }}">
+                                                                    <td class="text-center">{{ $index + 1 }}</td>
+                                                                    <td>{{ \Carbon\Carbon::parse($d->waktu_scan)->format('d/m/Y, H:i') }}</td>
+                                                                    <td>{{ $d->jadwal->mapel->nama_mapel ?? '-' }}</td>
+                                                                    <td class="text-center">
+                                                                        <span class="badge badge-secondary px-2 py-1">{{ $d->keterangan }}</span>
+                                                                    </td>
+                                                                </tr>
+                                                            @empty
+                                                                <tr>
+                                                                    <td colspan="4" class="text-center text-muted py-3">Belum ada riwayat absensi.</td>
+                                                                </tr>
+                                                            @endforelse
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -223,4 +280,43 @@
         </div>
     @endif
 </div>
+
+<style>
+/* Override nav-pills active state to match neutral theme */
+.nav-pills .nav-link.active.text-secondary {
+    background-color: #6c757d !important;
+    color: #fff !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Handle nav pill states
+            const ul = this.closest('ul');
+            ul.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Handle table row filtering
+            const targetClass = this.getAttribute('data-target');
+            const filterValue = this.getAttribute('data-filter');
+            
+            const rows = document.querySelectorAll('.' + targetClass);
+            rows.forEach(row => {
+                if(filterValue === 'Semua') {
+                    row.style.display = '';
+                } else if(row.getAttribute('data-status') === filterValue) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+</script>
 @endsection
