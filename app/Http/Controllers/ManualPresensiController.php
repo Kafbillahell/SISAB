@@ -240,23 +240,34 @@ class ManualPresensiController extends Controller
                         return; // skip duplicate
                     }
 
+                    // Jika user membatalkan status manual (cancel), maka hapus baris presensi jika asalnya manual
+                    if ($newLower === 'cancel') {
+                        $existing->delete();
+                        return;
+                    }
+
                     // Update existing manual record (allow changing Alpa->Sakit, etc.)
                     $existing->update([
                         'waktu_scan' => $waktu,
                         'status' => $stat,
                         'keterangan' => $stat,
-                        'jadwal_id' => $jadwalId,
-                        'tanggal' => $tanggal->format('Y-m-d')
+                        'jadwal_id' => $jadwalId
                     ]);
                 } else {
+                    $newLower = strtolower($stat);
+                    
+                    // Jangan buat presensi baru jika status awalnya sudah 'cancel' (uncheck di ui)
+                    if ($newLower === 'cancel') {
+                        return;
+                    }
+
                     // Create new manual presensi
                     Presensi::create([
                         'siswa_id' => $siswaId,
                         'jadwal_id' => $jadwalId,
                         'waktu_scan' => $waktu,
                         'status' => $stat,
-                        'keterangan' => $stat,
-                        'tanggal' => $tanggal->format('Y-m-d')
+                        'keterangan' => $stat
                     ]);
                 }
             });
