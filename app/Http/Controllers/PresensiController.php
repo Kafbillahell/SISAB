@@ -57,7 +57,7 @@ class PresensiController extends Controller
             });
 
             // Filter Tanggal
-            $startDate = $request->start_date ?? Carbon::now()->startOfMonth()->format('Y-m-d');
+            $startDate = $request->start_date ?? Carbon::now()->format('Y-m-d');
             $endDate = $request->end_date ?? Carbon::now()->format('Y-m-d');
             $query->whereBetween('waktu_scan', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
             

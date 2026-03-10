@@ -22,7 +22,7 @@
     <div class="card shadow mb-4 border-left-primary">
         <div class="card-body">
             <form action="{{ route('presensi.index') }}" method="GET" class="row align-items-end">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="small font-weight-bold">1. Pilih Kelas</label>
                     <select name="rombel_id" class="form-control" onchange="this.form.submit()">
                         <option value="">-- Pilih Kelas --</option>
@@ -46,15 +46,32 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-5">
                     <label class="small font-weight-bold">3. Rentang Waktu</label>
-                    <div class="input-group">
-                        <input type="date" name="start_date" class="form-control" value="{{ request('start_date', date('Y-m-01')) }}">
-                        <div class="input-group-append"><span class="input-group-text">s/d</span></div>
-                        <input type="date" name="end_date" class="form-control" value="{{ request('end_date', date('Y-m-d')) }}">
+                    <div class="d-flex">
+                        <div class="input-group flex-grow-1">
+                            <input type="date" id="start_date" name="start_date" class="form-control" value="{{ request('start_date', date('Y-m-d')) }}">
+                            <div class="input-group-prepend input-group-append">
+                                <span class="input-group-text bg-light border-left-0 border-right-0 px-2">s/d</span>
+                            </div>
+                            <input type="date" id="end_date" name="end_date" class="form-control" value="{{ request('end_date', date('Y-m-d')) }}">
+                        </div>
+                        <div class="dropdown ml-2">
+                            <button class="btn btn-outline-primary dropdown-toggle h-100" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Pintasan Waktu">
+                                <i class="fas fa-history"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in">
+                                <h6 class="dropdown-header">Rentang Cepat</h6>
+                                <a class="dropdown-item" href="#" onclick="setQuickDate(0)"><i class="fas fa-calendar-day fa-sm fa-fw mr-2 text-gray-400"></i>Hari Ini</a>
+                                <a class="dropdown-item" href="#" onclick="setQuickDate(1)"><i class="fas fa-history fa-sm fa-fw mr-2 text-gray-400"></i>1 Bulan Terakhir</a>
+                                <a class="dropdown-item" href="#" onclick="setQuickDate(3)"><i class="fas fa-history fa-sm fa-fw mr-2 text-gray-400"></i>3 Bulan Terakhir</a>
+                                <a class="dropdown-item" href="#" onclick="setQuickDate(6)"><i class="fas fa-history fa-sm fa-fw mr-2 text-gray-400"></i>6 Bulan Terakhir</a>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-2 mt-3 mt-md-0">
+                    <label class="small font-weight-bold d-none d-md-block">&nbsp;</label>
                     <button type="submit" class="btn btn-primary btn-block">
                         <i class="fas fa-search"></i> Cari
                     </button>
@@ -209,7 +226,7 @@
                                                             @forelse($stat->detail as $index => $d)
                                                                 <tr class="TR-{{ $stat->id }}" data-status="{{ $d->keterangan }}">
                                                                     <td class="text-center">{{ $index + 1 }}</td>
-                                                                    <td>{{ \Carbon\Carbon::parse($d->waktu_scan)->format('d/m/Y, H:i') }}</td>
+                                                                    <td>{{ \Carbon\Carbon::parse($d->waktu_scan)->locale('id')->translatedFormat('l, d F Y') }}</td>
                                                                     <td>{{ $d->jadwal->mapel->nama_mapel ?? '-' }}</td>
                                                                     <td class="text-center">
                                                                         <span class="badge badge-secondary px-2 py-1">{{ $d->keterangan }}</span>
@@ -318,5 +335,27 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+function setQuickDate(months) {
+    const endInput = document.getElementById('end_date');
+    const startInput = document.getElementById('start_date');
+    const form = startInput.closest('form');
+    
+    // Tentukan hari ini (untuk end_date)
+    const today = new Date();
+    const endStr = today.toISOString().split('T')[0];
+    
+    // Tentukan start date dengan mengurangi x bulan
+    const targetDate = new Date(today);
+    targetDate.setMonth(targetDate.getMonth() - months);
+    const startStr = targetDate.toISOString().split('T')[0];
+    
+    // Terapkan ke input
+    endInput.value = endStr;
+    startInput.value = startStr;
+    
+    // Kirim formulir setelah menetapkan nilai
+    if(form) form.submit();
+}
 </script>
 @endsection
