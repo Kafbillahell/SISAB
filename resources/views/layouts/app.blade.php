@@ -203,7 +203,8 @@
             background: rgba(0, 0, 0, 0.2);
         }
     </style>
-
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body id="page-top">
@@ -285,5 +286,6 @@
         }
     </script>
 
+    @stack('scripts')
 </body>
 </html>
