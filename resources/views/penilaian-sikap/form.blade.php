@@ -8,8 +8,8 @@
     </div>
 
     <div class="row">
-        <div class="col-xl-8 col-lg-8">
-            <div class="card shadow mb-4">
+        <div class="col-xl-8 col-lg-8 d-flex flex-column">
+            <div class="card shadow mb-4 flex-grow-1">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-primary">Beri Penilaian Sikap</h6>
                 </div>
@@ -67,7 +67,7 @@
             </div>
         </div>
 
-        <div class="col-xl-4 col-lg-4">
+        <div class="col-xl-4 col-lg-4 d-flex flex-column">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">Profil Siswa</h6>
@@ -101,7 +101,7 @@
                 </div>
             </div>
 
-            <div class="card shadow mb-4">
+            <div class="card shadow mb-4 flex-grow-1">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-info"><i class="fas fa-info-circle mr-1"></i> Rubrik Penilaian</h6>
                 </div>

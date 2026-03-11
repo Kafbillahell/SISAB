@@ -8,18 +8,14 @@
     </div>
 
     <div class="row">
-        <div class="col-xl-8 col-lg-8">
-            <div class="card shadow mb-4">
+        <div class="col-xl-8 col-lg-8 d-flex flex-column">
+            <div class="card shadow mb-4 flex-grow-1">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-primary">Hasil Penilaian</h6>
                     <a href="{{ route('penilaian-sikap.form', $siswa->id) }}" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i> Edit Nilai</a>
                 </div>
                 <div class="card-body">
                     @if($penilaian)
-                        <div class="alert alert-success mb-4">
-                            Siswa ini telah dinilai oleh: <strong>{{ $penilaian->penilai->name ?? 'Sistem' }}</strong> pada {{ $penilaian->updated_at->format('d M Y H:i') }}.
-                        </div>
-                        
                         <div class="table-responsive">
                             <table class="table table-hover table-bordered">
                                 <thead class="bg-gray-100">
@@ -91,7 +87,7 @@
             </div>
         </div>
 
-        <div class="col-xl-4 col-lg-4">
+        <div class="col-xl-4 col-lg-4 d-flex flex-column">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">Profil Siswa</h6>
@@ -114,21 +110,36 @@
                             <span class="float-right">{{ $siswa->jenis_kelamin == 'L' ? 'Laki-laki' : 'Perempuan' }}</span>
                         </li>
                         <li class="list-group-item px-0">
-                            <strong>Total Skor:</strong>
+                            <strong>Predikat:</strong>
                             @if($penilaian)
                                 @php
                                     $total = $penilaian->tanggung_jawab + $penilaian->kejujuran + $penilaian->sopan_santun + $penilaian->kemandirian + $penilaian->kerja_sama;
+                                    $predikat = '-';
+                                    $badge = 'secondary';
+                                    if ($total >= 21) { $predikat = 'Sangat Baik'; $badge = 'success'; }
+                                    elseif ($total >= 16) { $predikat = 'Baik'; $badge = 'primary'; }
+                                    elseif ($total >= 11) { $predikat = 'Cukup'; $badge = 'warning'; }
+                                    elseif ($total >= 6) { $predikat = 'Kurang'; $badge = 'danger'; }
+                                    else { $predikat = 'Sangat Kurang'; $badge = 'dark'; }
                                 @endphp
-                                <span class="badge badge-primary float-right p-2" style="font-size: 14px;">{{ $total }} / 25</span>
+                                <span class="badge badge-{{ $badge }} float-right p-1 mt-1">{{ $predikat }}</span>
                             @else
-                                <span class="badge badge-secondary float-right">-</span>
+                                <span class="badge badge-warning float-right p-1 mt-1"><i class="fas fa-clock"></i> Belum Dinilai</span>
+                            @endif
+                        </li>
+                        <li class="list-group-item px-0">
+                            <strong>Total Skor:</strong>
+                            @if($penilaian)
+                                <span class="badge badge-light border text-dark float-right p-2" style="font-size: 14px;">{{ $total }} / 25</span>
+                            @else
+                                <span class="badge badge-light border text-dark float-right">-</span>
                             @endif
                         </li>
                     </ul>
                 </div>
             </div>
 
-            <div class="card shadow mb-4">
+            <div class="card shadow mb-4 flex-grow-1">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-info"><i class="fas fa-chart-pie mr-1"></i> Kategori Skor</h6>
                 </div>
