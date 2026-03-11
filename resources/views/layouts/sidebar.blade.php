@@ -101,6 +101,14 @@
             <span>Input Manual</span></a>
     </li>
 
+    @if(auth()->check() && in_array(auth()->user()->role, ['admin', 'guru']))
+    <li class="nav-item {{ request()->is('penilaian-sikap*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('penilaian-sikap.index') }}">
+            <i class="fas fa-fw fa-star"></i>
+            <span>Penilaian Sikap Siswa</span></a>
+    </li>
+    @endif
+
     <li class="nav-item {{ request()->is('settings/lokasi*') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('settings.lokasi') }}">
             <i class="fas fa-fw fa-map-marker-alt"></i>

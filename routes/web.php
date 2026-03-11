@@ -15,31 +15,17 @@ use App\Http\Controllers\{
     PresensiController,
     JurusanController,
     SesiController,
-    SettingController
+    SettingController,
+    ManualPresensiController 
 };
 
-
-
-// --- Rute API AJAX (Bisa diakses login/tidak sesuai kebutuhan) ---
+// --- Rute API AJAX ---
 Route::get('/siswas/search-api/{nisn}', [SiswaController::class, 'searchByNisn'])->name('siswas.searchApi');
 
 // --- Route Guest (Belum Login) ---
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
-});
-
-Route::middleware(['auth'])->group(function () {
-    // Route Khusus Guru
-    Route::get('/guru/refresh', function() {
-        \Illuminate\Support\Facades\Cache::forget('data_guru_api_2025');
-        return redirect()->route('guru.index')->with('success', 'Data Cloud diperbarui!');
-    })->name('guru.refresh');
-
-    Route::get('/guru/sync/{nip}', [GuruController::class, 'sync'])->name('guru.sync');
-    Route::resource('guru', GuruController::class);
-    
-    // ... rute lainnya
 });
 
 // --- Route Authenticated (Sudah Login) ---
@@ -51,14 +37,20 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/', function () { return view('pages.index'); });
     Route::get('/dashboard', function () { return view('pages.index'); })->name('dashboard');
 
-    // --- Manajemen Siswa (Custom Routes harus di atas Resource) ---
-    // Rute Sync jika Anda menggunakan fungsi sinkronisasi otomatis
+    // --- Manajemen Guru (DIPERBAIKI: Hanya didefinisikan sekali di sini) ---
+    Route::get('/guru/refresh', function() {
+        \Illuminate\Support\Facades\Cache::forget('data_guru_api_2025');
+        return redirect()->route('guru.index')->with('success', 'Data Cloud diperbarui!');
+    })->name('guru.refresh');
+    Route::get('/guru/sync/{nip}', [GuruController::class, 'sync'])->name('guru.sync');
+    Route::resource('guru', GuruController::class);
+
+    // --- Manajemen Siswa ---
     Route::get('/siswas/sync/{nisn}', [SiswaController::class, 'sync'])->name('siswas.sync'); 
     Route::resource('siswas', SiswaController::class);
 
-    // --- Manajemen User & Personalia ---
+    // --- Manajemen User & Sesi ---
     Route::resource('users', UserController::class);
-    Route::resource('guru', GuruController::class);
     Route::resource('sesi', SesiController::class);
 
     // --- Data Akademik ---
@@ -83,9 +75,16 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/presensi/scanner', [PresensiController::class, 'scanner'])->name('presensi.scanner');
     Route::post('/presensi/store', [PresensiController::class, 'store'])->name('presensi.store');
     Route::get('/presensi/daftar-siswa/{rombel}', [PresensiController::class, 'daftarSiswa'])->name('presensi.daftarSiswa');
-    // Manual input untuk wali kelas: Sakit / Izin / Alpa
-    Route::get('/presensi/manual', [\App\Http\Controllers\ManualPresensiController::class, 'index'])->name('presensi.manual');
-    Route::post('/presensi/manual', [\App\Http\Controllers\ManualPresensiController::class, 'store'])->name('presensi.manual.store');
+    
+    // Manual input menggunakan import controller di atas
+    Route::get('/presensi/manual', [ManualPresensiController::class, 'index'])->name('presensi.manual');
+    Route::post('/presensi/manual', [ManualPresensiController::class, 'store'])->name('presensi.manual.store');
+
+    // --- Penilaian Sikap ---
+    Route::get('/penilaian-sikap', [\App\Http\Controllers\PenilaianSikapController::class, 'index'])->name('penilaian-sikap.index');
+    Route::get('/penilaian-sikap/{siswa_id}/form', [\App\Http\Controllers\PenilaianSikapController::class, 'form'])->name('penilaian-sikap.form');
+    Route::post('/penilaian-sikap/{siswa_id}/store', [\App\Http\Controllers\PenilaianSikapController::class, 'store'])->name('penilaian-sikap.store');
+    Route::get('/penilaian-sikap/{siswa_id}/show', [\App\Http\Controllers\PenilaianSikapController::class, 'show'])->name('penilaian-sikap.show');
 
     // --- Pengaturan Lokasi (GPS) ---
     Route::get('/settings/lokasi', [SettingController::class, 'index'])->name('settings.lokasi');
