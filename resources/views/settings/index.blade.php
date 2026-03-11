@@ -1,3 +1,8 @@
+{{-- 
+    File: settings/index.blade.php
+    Fungsi: Antarmuka pengaturan Lokasi GPS (Koordinat pusat dan Radius) untuk keperluan
+    "Smart Attendance" presensi wajah berbasis lokasi. Menggunakan Map Leaflet.js.
+--}}
 @extends('layouts.app')
 
 @section('title', 'Atur Lokasi Absensi')

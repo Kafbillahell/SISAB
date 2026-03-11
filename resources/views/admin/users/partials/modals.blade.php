@@ -1,3 +1,8 @@
+{{-- 
+    File: admin/users/partials/modals.blade.php
+    Fungsi: Menyimpan blok HTML untuk komponen modal Bootstrap yang dulunya digunakan 
+    untuk form edit dan konfirmasi hapus data secara spesifik. (Kini sering digantikan dengan single modal AJAX).
+--}}
 <div class="modal fade" id="editModal{{ $user->id }}" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">

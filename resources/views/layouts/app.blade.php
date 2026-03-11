@@ -1,3 +1,9 @@
+{{-- 
+    File: layouts/app.blade.php
+    Fungsi: Merupakan kerangka utama (master layout) untuk halaman-halaman dalam aplikasi.
+    Menyertakan struktur HTML dasar, pemanggilan aset CSS & JS (seperti SB Admin 2), 
+    serta membungkus komponen umum seperti sidebar, navbar/header, dan footer.
+--}}
 <!DOCTYPE html>
 <html lang="en">
 

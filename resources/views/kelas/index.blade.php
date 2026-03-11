@@ -1,3 +1,8 @@
+{{-- 
+    File: kelas/index.blade.php
+    Fungsi: Antarmuka pengelolaan daftar kelas / rombongan belajar (rombel).
+    Memungkinkan operasi tambah, edit, dan hapus data (tingkat, jurusan, nama kelas).
+--}}
 @extends('layouts.app')
 
 @section('content')

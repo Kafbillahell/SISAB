@@ -7,10 +7,13 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
+    // Menampilkan halaman web utama untuk proses login pengguna
     public function showLogin() {
         return view('auth.login');
     }
 
+    // Memproses data kredensial (email dan password) yang dikirimkan saat login
+    // Jika valid, akan membuat sesi baru untuk pengguna
     public function login(Request $request) {
         $credentials = $request->validate([
             'email' => 'required|email',
@@ -29,6 +32,7 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
+    // Menghapus sesi aktif pengguna saat ini dan mengarahkannya kembali ke halaman login
     public function logout(Request $request) {
         Auth::logout();
         $request->session()->invalidate();

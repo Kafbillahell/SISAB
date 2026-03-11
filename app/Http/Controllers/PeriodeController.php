@@ -7,12 +7,14 @@ use Illuminate\Http\Request;
 
 class PeriodeController extends Controller
 {
+    // Menampilkan daftar periode akademik/kegiatan yang terdaftar di sistem
     public function index()
     {
         $periodes = Periode::latest()->get();
         return view('periode.index', compact('periodes'));
     }
 
+    // Membuat dan menyisipkan periode baru ke dalam database
     public function store(Request $request)
     {
         $request->validate([
@@ -28,6 +30,7 @@ class PeriodeController extends Controller
         return redirect()->route('periode.index')->with('success', 'Periode berhasil ditambahkan.');
     }
 
+    // Menyimpan perubahan pada data periode (seperti status keaktifan atau nama)
     public function update(Request $request, Periode $periode)
     {
         $request->validate([
@@ -43,6 +46,7 @@ class PeriodeController extends Controller
         return redirect()->route('periode.index')->with('success', 'Periode berhasil diperbarui.');
     }
 
+    // Menghapus data periode dari database
     public function destroy(Periode $periode)
     {
         $periode->delete();

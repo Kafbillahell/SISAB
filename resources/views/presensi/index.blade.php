@@ -1,3 +1,9 @@
+{{-- 
+    File: presensi/index.blade.php
+    Fungsi: Menampilkan halaman analitik terpadu rekapitulasi presensi siswa.
+    Berisi statistik laporan kehadiran per kelas/mapel, rentang filter pencarian tanggal, 
+    serta ringkasan log history absensi terbaru.
+--}}
 @extends('layouts.app')
 
 @section('content')

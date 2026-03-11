@@ -7,6 +7,7 @@ use App\Models\Setting;
 
 class SettingController extends Controller
 {
+    // Menampilkan halaman pengaturan umum sistem (seperti titik koordinat GPS sekolah dan radius)
     public function index()
     {
         $lokasi = Setting::getValue('lokasi_kantor', '-6.9202,107.6186'); // Default Bandung if empty
@@ -15,6 +16,7 @@ class SettingController extends Controller
         return view('settings.index', compact('lokasi', 'radius'));
     }
 
+    // Memproses form pembaruan pengaturan sistem dan menyimpannya di basis data
     public function update(Request $request)
     {
         $request->validate([

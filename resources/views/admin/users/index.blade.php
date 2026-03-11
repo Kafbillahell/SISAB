@@ -1,3 +1,8 @@
+{{-- 
+    File: admin/users/index.blade.php
+    Fungsi: Menampilkan daftar seluruh pengguna berdasarkan tab role (admin, guru, siswa).
+    Menyediakan fitur untuk Menambah, Mengedit, dan Menghapus pengguna melalui komponen Modal Bootstrap.
+--}}
 @extends('layouts.app')
 
 @section('content')

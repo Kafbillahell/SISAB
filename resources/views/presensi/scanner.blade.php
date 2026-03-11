@@ -1,3 +1,9 @@
+{{-- 
+    File: presensi/scanner.blade.php
+    Fungsi: Antarmuka utama halaman "Smart Attendance" berupa pemindaian wajah langsung dari kamera piranti.
+    Menggunakan library "face-api.js" dan mengirim data via AJAX Post untuk melacak kehadiran 
+    siswa secara otomatis beserta parameter koordinat GPS geolokasinya.
+--}}
 @extends('layouts.app')
 
 @section('content')

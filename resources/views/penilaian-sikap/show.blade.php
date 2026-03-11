@@ -1,3 +1,9 @@
+{{-- 
+    File: penilaian-sikap/show.blade.php
+    Fungsi: Menampilkan detail riwayat dan pemetaan penilaian sikap siswa.
+    Menyajikan visualisasi Grafik Radar (menggunakan Chart.js) untuk melihat kesimbangan 
+    sikap, serta riwayat timeline historis penilaian dari berbagai periode belajar.
+--}}
 @extends('layouts.app')
 
 @section('content')

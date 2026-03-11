@@ -1,3 +1,9 @@
+{{-- 
+    File: jadwal/index.blade.php
+    Fungsi: Berupa antarmuka matriks interaktif penjadwalan pelajaran harian dan mingguan.
+    Menampilkan jadwal dalam bentuk "grid" (tabel baris/kolom) yang bisa diklik 
+    untuk pengisian otomatis (quick-add) bersama penanda ketersediaan guru.
+--}}
 @extends('layouts.app')
 
 @section('content')

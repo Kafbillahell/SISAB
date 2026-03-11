@@ -1,3 +1,9 @@
+{{-- 
+    File: siswas/create.blade.php
+    Fungsi: Antarmuka form registrasi wajah siswa baru atau update foto wajah.
+    Terintegrasi dengan kamera perangkat menggunakan "face-api.js" untuk mendeteksi
+    wajah, mengambil snapshot, dan menyimpannya sebagai data master presensi wajah.
+--}}
 @extends('layouts.app')
 
 @section('content')

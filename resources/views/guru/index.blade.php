@@ -1,3 +1,8 @@
+{{-- 
+    File: guru/index.blade.php
+    Fungsi: Menampilkan halaman utama untuk memanajemen data sinkronisasi API guru secara keseluruhan.
+    Dilengkapi tabel pendaftaran (registrasi) terstruktur, filter pencarian, dan alat identifikasi akun.
+--}}
 @extends('layouts.app')
 
 @section('content')

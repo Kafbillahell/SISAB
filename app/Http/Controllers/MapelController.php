@@ -7,12 +7,14 @@ use Illuminate\Http\Request;
 
 class MapelController extends Controller
 {
+    // Menampilkan halaman daftar seluruh Mata Pelajaran (Mapel)
     public function index()
     {
         $mapels = Mapel::orderBy('nama_mapel', 'asc')->get();
         return view('mapel.index', compact('mapels'));
     }
 
+    // Menyimpan mata pelajaran baru ke database dengan validasi unik kode_mapel
     public function store(Request $request)
     {
         $request->validate([
@@ -24,6 +26,7 @@ class MapelController extends Controller
         return redirect()->back()->with('success', 'Mata Pelajaran berhasil ditambahkan.');
     }
 
+    // Memperbarui atribut dari sebuah mata pelajaran eksisting di database
     public function update(Request $request, Mapel $mapel)
     {
         $request->validate([
@@ -35,6 +38,7 @@ class MapelController extends Controller
         return redirect()->back()->with('success', 'Mata Pelajaran berhasil diperbarui.');
     }
 
+    // Menghapus mata pelajaran dari database
     public function destroy(Mapel $mapel)
     {
         $mapel->delete();

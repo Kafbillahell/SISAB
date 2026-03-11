@@ -1,3 +1,8 @@
+{{-- 
+    File: guru/edit.blade.php
+    Fungsi: Menampilkan halaman form khusus pengelolaan serta pembaruan (update) 
+    data profil guru dan informasi pengaitan akun penggunanya (user).
+--}}
 @extends('layouts.app')
 
 @section('content')

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 
 class SesiController extends Controller
 {
+    // Menampilkan halaman daftar sesi atau slot waktu pelajaran referensi universal
     public function index()
     {
         // PERBAIKAN: Hapus 'hari' karena kolomnya sudah tidak ada di database
@@ -14,6 +15,7 @@ class SesiController extends Controller
         return view('sesi.index', compact('sesis'));
     }
 
+    // Membuat dan menyisipkan data sesi waktu pembelajaran ke dalam database
     public function store(Request $request)
     {
         // PERBAIKAN: Jangan validasi 'hari' di sini
@@ -36,6 +38,7 @@ class SesiController extends Controller
         return back()->with('success', 'Sesi waktu berhasil ditambahkan secara universal!');
     }
 
+    // Menghapus definisi jadwal sesi dari database
     public function destroy(Sesi $sesi)
     {
         $sesi->delete();

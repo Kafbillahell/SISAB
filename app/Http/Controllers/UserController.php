@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
+    // Menampilkan halaman daftar manajemen pengguna sistem (Admin, Guru, atau Siswa)
+    // Mendukung filter berdasarkan role dan membatasi data (pagination) per 20 entri baris
     public function index(Request $request)
 {
     // Ambil filter role dari URL, default-nya 'admin'
@@ -27,6 +29,8 @@ class UserController extends Controller
     return view('admin.users.index', compact('users', 'role'));
 }
 
+    // Memproses dan menyimpan akun pengguna (User) baru ke database
+    // Mengamankan password dan memberikan password default 'gurusmk123' untuk guru jika dikosongkan
     public function store(Request $request)
     {
         $request->validate([
@@ -63,6 +67,7 @@ class UserController extends Controller
         return back()->with('success', 'User berhasil dibuat!');
     }
 
+    // Memperbarui atribut informasi dari spesifik sebuah akun pengguna (ganti level/role, penamaan, perbarui sandi)
     public function update(Request $request, User $user)
     {
         $request->validate([
@@ -84,6 +89,7 @@ class UserController extends Controller
         return back()->with('success', 'User berhasil diperbarui!');
     }
 
+    // Mencabut serta menghapus akun pengguna (User) secara permanen dari basis data
     public function destroy(User $user)
     {
         $user->delete();

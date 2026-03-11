@@ -1,3 +1,9 @@
+{{-- 
+    File: sesi/index.blade.php
+    Fungsi: Antarmuka pengelolaan daftar Sesi Waktu Pembelajaran/Istirahat.
+    Informasi sesi mengatur jam masuk-keluar yang bersifat universal 
+    (berlaku untuk seluruh hari dalam Jadwal Pelajaran).
+--}}
 @extends('layouts.app')
 
 @section('content')

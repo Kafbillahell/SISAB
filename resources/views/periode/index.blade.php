@@ -1,3 +1,9 @@
+{{-- 
+    File: periode/index.blade.php
+    Fungsi: Manajemen daftar referensi periode akademis / semester.
+    Menyediakan fitur untuk mengatur, menambah, mengedit, menghapus, 
+    dan menandai status aktif/tidak suatu periode melalui Modal.
+--}}
 @extends('layouts.app')
 
 @section('content')

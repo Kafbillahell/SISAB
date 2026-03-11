@@ -7,12 +7,14 @@ use Illuminate\Http\Request;
 
 class JurusanController extends Controller
 {
+    // Menampilkan halaman daftar semua jurusan yang tersedia
     public function index()
     {
         $jurusans = Jurusan::orderBy('nama_jurusan', 'asc')->get();
         return view('jurusan.index', compact('jurusans'));
     }
 
+    // Menyimpan data jurusan baru ke dalam database
     public function store(Request $request)
     {
         $request->validate([
@@ -24,6 +26,7 @@ class JurusanController extends Controller
         return redirect()->back()->with('success', 'Jurusan berhasil ditambahkan.');
     }
 
+    // Memperbarui informasi jurusan yang dipilih di dalam database
     public function update(Request $request, Jurusan $jurusan)
     {
         $request->validate([
@@ -35,6 +38,7 @@ class JurusanController extends Controller
         return redirect()->back()->with('success', 'Jurusan berhasil diupdate.');
     }
 
+    // Menghapus data jurusan dari database berdasarkan objek jurusan yang ditentukan
     public function destroy(Jurusan $jurusan)
     {
         $jurusan->delete();

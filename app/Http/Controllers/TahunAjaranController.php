@@ -7,12 +7,14 @@ use Illuminate\Http\Request;
 
 class TahunAjaranController extends Controller
 {
+    // Menampilkan halaman daftar seluruh tahun ajaran dan semester yang ada dalam sistem
     public function index()
     {
         $tahunAjarans = TahunAjaran::orderBy('tahun', 'desc')->get();
         return view('tahun_ajaran.index', compact('tahunAjarans'));
     }
 
+    // Menyimpan pengaturan tahun ajaran dan semester baru ke dalam database
     public function store(Request $request)
     {
         $request->validate([
@@ -24,6 +26,8 @@ class TahunAjaranController extends Controller
         return redirect()->back()->with('success', 'Tahun Ajaran berhasil ditambah.');
     }
 
+    // Mengaktifkan suatu tahun ajaran spesifik
+    // Menonaktifkan seluruh tahun ajaran lain terlebih dahulu agar hanya satu yang aktif
     public function activate($id)
     {
         // Nonaktifkan semua tahun ajaran
@@ -36,6 +40,8 @@ class TahunAjaranController extends Controller
         return redirect()->back()->with('success', 'Tahun Ajaran ' . $ta->tahun . ' (' . $ta->semester . ') sekarang aktif.');
     }
 
+    // Menghapus data tahun ajaran dari sistem
+    // Mencegah panghapusan jika tahun ajaran tersebut masih berstatus aktif
     public function destroy(TahunAjaran $tahunAjaran)
     {
         if ($tahunAjaran->is_active) {

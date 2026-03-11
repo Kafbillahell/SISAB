@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 
 class AnggotaRombelController extends Controller
 {
+    // Menampilkan halaman daftar anggota rombongan belajar (rombel)
+    // Fungsi ini juga menangani filter pencarian anggota berdasarkan rombel yang dipilih
     public function index(Request $request)
 {
     $rombels = Rombel::with(['kelas', 'tahunAjaran'])->get();
@@ -34,6 +36,8 @@ class AnggotaRombelController extends Controller
     return view('anggota_rombel.index', compact('rombels', 'selectedRombel', 'anggotas', 'siswas'));
 }
 
+    // Menyimpan data siswa baru ke dalam anggota rombongan belajar (rombel)
+    // Memproses form tambah siswa secara massal untuk sebuah rombel
     public function store(Request $request)
 {
     $request->validate([
@@ -55,6 +59,7 @@ class AnggotaRombelController extends Controller
     return redirect()->back()->with('success', 'Siswa berhasil ditambahkan ke Rombel.');
 }
 
+    // Menghapus atau mengeluarkan seorang siswa dari rombongan belajar (rombel)
     public function destroy($id)
     {
         $anggota = AnggotaRombel::findOrFail($id);

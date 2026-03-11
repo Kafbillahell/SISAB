@@ -1,3 +1,8 @@
+{{-- 
+    File: mapel/index.blade.php
+    Fungsi: Menampilkan halaman antarmuka pengelolaan data referensi Mata Pelajaran (Mapel).
+    Tersedia form untuk menambahkan, mengedit, dan menghapus mapel.
+--}}
 @extends('layouts.app')
 
 @section('content')

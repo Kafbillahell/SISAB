@@ -1,3 +1,8 @@
+{{-- 
+    File: welcome.blade.php
+    Fungsi: Halaman depan default Laravel (Landing Page) saat aplikasi pertama kali diakses.
+    Memberikan penunjuk navigasi ke Log In / Register / Dashboard bagi user.
+--}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>

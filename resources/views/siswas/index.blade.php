@@ -1,3 +1,9 @@
+{{-- 
+    File: siswas/index.blade.php
+    Fungsi: Halaman manajemen daftar siswa. Menampilkan tabel data siswa dengan
+    fitur penyaringan (berdasarkan nama/NISN, jurusan, kelas, jenis kelamin), 
+    serta tombol aksi untuk melihat detail atau meregistrasikan wajah siswa.
+--}}
 @extends('layouts.app')
 
 @section('content')

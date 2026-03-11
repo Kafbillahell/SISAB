@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class ManualPresensiController extends Controller
 {
+    // Menampilkan halaman antarmuka pengisian presensi secara manual oleh guru/admin
+    // Mengatur default rombel, jadwal, dan memuat status kehadiran murid (jika sudah ada)
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -168,6 +170,8 @@ class ManualPresensiController extends Controller
         ));
     }
 
+    // Memproses dan menyimpan data presensi manual yang dikirim dari form
+    // Menggunakan validasi dan database transaction agar data tetap konsisten meski di-submit bersamaan
     public function store(Request $request)
     {
         $request->validate([
@@ -281,6 +285,7 @@ class ManualPresensiController extends Controller
         ])->with('success', 'Data presensi manual berhasil disimpan.');
     }
 
+    // Fungsi pembantu sederhana untuk menerjemahkan nama hari Bahasa Inggris ke Bahasa Indonesia
     private function getHariIndo($day)
     {
         $map = [

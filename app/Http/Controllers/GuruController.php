@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class GuruController extends Controller
 {
+    // Menampilkan halaman daftar guru, terintegrasi dengan data API external Zielabs
+    // Menangani juga fitur pencarian dan filter jenis kelamin
     public function index(Request $request)
 {
     // Mengambil data real-time dari API
@@ -52,6 +54,8 @@ class GuruController extends Controller
     return view('guru.index', compact('gurus', 'nipTerdaftar'));
 }
 
+    // Fungsi sinkronisasi spesifik untuk menyalin dan memperbarui data guru dari API ke database lokal
+    // Membuat otomatis akun (User) beserta profil Guru mengacu pada NIP yang dipilih
     public function sync($nip)
 {
     try {
@@ -108,6 +112,7 @@ class GuruController extends Controller
     }
 }
 
+    // Menghapus data profil guru beserta akun login terkait dari database
     public function destroy(Guru $guru)
     {
         $user = User::find($guru->user_id);

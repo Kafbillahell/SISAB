@@ -12,10 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class SiswaController extends Controller
 {
-    /**
-     * Helper Private: Mengambil data dari API dengan Cache & Timeout lebih panjang.
-     * Digunakan oleh index(), searchByNisn(), dan sync().
-     */
+    // Fungsi private pembantu: Mengambil data siswa dari API eksternal (ZieLabs) dengan Cache & Timeout lebih panjang
+    // Digunakan oleh method index(), searchByNisn(), dan sync() untuk mencegah request berulang
     private function getSiswaFromApi()
     {
         // Simpan data selama 30 menit (1800 detik)
@@ -31,9 +29,8 @@ class SiswaController extends Controller
         });
     }
 
-    /**
-     * Menampilkan daftar siswa dari API ZieLabs
-     */
+    // Menampilkan halaman daftar siswa yang diambil dari API
+    // Termasuk logika filter pencarian berdasarkan nama, NISN, jurusan, rombel, dan jenis kelamin
     public function index(Request $request)
     {
         // 1. Ambil data (dari Cache jika sudah pernah didownload)
@@ -73,17 +70,14 @@ class SiswaController extends Controller
         return view('siswas.index', compact('siswas', 'list_jurusan', 'list_kelas'));
     }
 
-    /**
-     * Halaman form pendaftaran wajah (Scanner)
-     */
+    // Menampilkan halaman form pendaftaran wajah siswa (menggunakan antarmuka kamera scanner)
     public function create()
     {
         return view('siswas.create');
     }
 
-    /**
-     * Simpan data siswa dan foto wajah hasil scan
-     */
+    // Memproses dan menyimpan data pendaftaran siswa baru beserta file foto wajah hasil scan
+    // Sekaligus membuat akun login (User) untuk siswa tersebut pada sistem
     public function store(Request $request)
     {
         $request->validate([
@@ -128,9 +122,7 @@ class SiswaController extends Controller
         }
     }
 
-    /**
-     * AJAX Search: Mencari data di Cache berdasarkan NISN
-     */
+    // Berfungsi sebagai endpoint AJAX untuk mencari rincian data API berdasarkan NISN (mengambil dari cache)
     public function searchByNisn($nisn)
     {
         $allSiswas = $this->getSiswaFromApi();
@@ -147,9 +139,8 @@ class SiswaController extends Controller
         return response()->json(['success' => false], 404);
     }
 
-    /**
-     * Mengarahkan ke halaman registrasi wajah dengan data dari API (melalui Cache)
-     */
+    // Mengarahkan ke halaman registrasi wajah/akun, dengan secara otomatis mengisi (pre-fill) data
+    // menggunakan informasi siswa yang ada di API berdasarkan NISN
     public function sync($nisn)
     {
         // Ambil data dari Cache (Instan, tidak download ulang)

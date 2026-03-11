@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 
 class JadwalController extends Controller
 {
+    // Menampilkan halaman antarmuka manajemen jadwal pelajaran
+    // Memuat seluruh data referensi yang dibutuhkan saat membuat jadwal baru (Rombel, Jurusan, Mapel, Guru, Sesi)
     public function index() 
     {
         $rombels = Rombel::with('jurusan', 'kelas')->get();
@@ -26,6 +28,8 @@ class JadwalController extends Controller
         return view('jadwal.index', compact('rombels', 'jurusans', 'mapels', 'gurus', 'jadwals', 'sesis'));
     }
 
+    // Menyimpan entri jadwal pelajaran baru ke dalam database
+    // Dilengkapi dengan validasi bentrok jadwal berdasarkan rentang waktu tiap sesinya
     public function store(Request $request)
     {
         $request->validate([
@@ -88,6 +92,7 @@ class JadwalController extends Controller
         ]);
     }
 
+    // Menghapus entri jadwal pelajaran yang sudah ada dari database
     public function destroy(Jadwal $jadwal)
     {
         try {

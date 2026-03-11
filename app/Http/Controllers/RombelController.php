@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 
 class RombelController extends Controller
 {
+    // Menampilkan halaman daftar rombongan belajar (rombel)
+    // Menarik data terkait seperti kelas, guru wali, dan tahun ajaran
     public function index()
     {
         $rombels = Rombel::with(['kelas', 'guru', 'tahunAjaran'])->get();
@@ -20,6 +22,7 @@ class RombelController extends Controller
         return view('rombel.index', compact('rombels', 'kelas', 'gurus', 'tahunAjarans'));
     }
 
+    // Menyimpan pengaturan rombel baru ke dalam database
     public function store(Request $request)
     {
         $request->validate([
@@ -33,6 +36,7 @@ class RombelController extends Controller
         return redirect()->back()->with('success', 'Rombongan Belajar berhasil dibuat.');
     }
 
+    // Memperbarui pengaturan rombel yang ada (misal ganti wali kelas atau nama rombel)
     public function update(Request $request, Rombel $rombel)
     {
         $request->validate([
@@ -46,6 +50,7 @@ class RombelController extends Controller
         return redirect()->back()->with('success', 'Rombel berhasil diperbarui.');
     }
 
+    // Menghapus data rombongan belajar dari database
     public function destroy(Rombel $rombel)
     {
         $rombel->delete();

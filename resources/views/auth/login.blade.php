@@ -1,3 +1,8 @@
+{{-- 
+    File: auth/login.blade.php
+    Fungsi: Menampilkan halaman antarmuka login. Tersedia form untuk 
+    memasukkan kredensial (email & password) berserta gaya visual khusus.
+--}}
 <!DOCTYPE html>
 <html lang="id">
 

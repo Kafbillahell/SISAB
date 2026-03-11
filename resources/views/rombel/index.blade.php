@@ -1,3 +1,9 @@
+{{-- 
+    File: rombel/index.blade.php
+    Fungsi: Manajemen daftar Rombongan Belajar (Rombel).
+    Memungkinkan operasi penambahan, perubahan, atau penghapusan Rombel yang
+    mencakup relasi Kelas/Tingkat, Wali Kelas, dan Tahun Ajaran.
+--}}
 @extends('layouts.app')
 
 @section('content')

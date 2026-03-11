@@ -1,3 +1,9 @@
+{{-- 
+    File: anggota_rombel/index.blade.php
+    Fungsi: Antarmuka pengelolaan anggota rombongan belajar (kelas khusus).
+    Memiliki fitur filter untuk memilih rombel, tabel daftar siswa di rombel tersebut, 
+    dan fitur penambahan massal siswa ke dalam rombel.
+--}}
 @extends('layouts.app')
 
 @section('content')

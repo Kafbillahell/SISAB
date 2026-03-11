@@ -1,3 +1,8 @@
+{{-- 
+    File: presensi/manual.blade.php
+    Fungsi: Antarmuka form khusus penandaan/input presensi siswa secara manual oleh Guru/Wali Kelas.
+    Digunakan bila ada siswa yang berhalangan Hadir (misal Sakit, Izin, Alpa) tanpa lewat absen Wajah/Scanner.
+--}}
 @extends('layouts.app')
 
 @section('content')

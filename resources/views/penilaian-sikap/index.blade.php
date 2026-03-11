@@ -1,3 +1,9 @@
+{{-- 
+    File: penilaian-sikap/index.blade.php
+    Fungsi: Antarmuka utama penilaian sikap siswa berupa grid daftar siswa.
+    Memiliki fitur filter kelas, komponen progress bar untuk Wali Kelas, 
+    dan modal Fast-Input untuk pengisian skor cepat dengan AJAX.
+--}}
 @extends('layouts.app')
 
 @section('content')

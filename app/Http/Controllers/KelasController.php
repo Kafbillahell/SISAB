@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 
 class KelasController extends Controller
 {
+    // Menampilkan halaman daftar kelas beserta entitas jurusan yang terkait
     public function index()
     {
         $kelas = Kelas::with('jurusan')->orderBy('tingkat', 'asc')->get();
@@ -16,6 +17,7 @@ class KelasController extends Controller
         return view('kelas.index', compact('kelas', 'jurusans'));
     }
 
+    // Mengirimkan dan menyimpan form pembuatan kelas baru ke database
     public function store(Request $request)
     {
         $request->validate([
@@ -29,6 +31,7 @@ class KelasController extends Controller
         return redirect()->back()->with('success', 'Kelas berhasil ditambahkan.');
     }
 
+    // Memperbarui properti atau rincian dari sebuah kelas eksisting di database
     // Ubah parameter dari Kelas $kelas menjadi $id
     public function update(Request $request, $id) 
     {
@@ -44,6 +47,7 @@ class KelasController extends Controller
         return redirect()->route('kelas.index')->with('success', 'Kelas berhasil diupdate.');
     }
 
+    // Menghapus data kelas yang tidak lagi diperlukan dari database
     // Ubah juga parameter destroy agar konsisten
     public function destroy($id)
     {

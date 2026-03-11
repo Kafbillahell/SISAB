@@ -1,3 +1,8 @@
+{{-- 
+    File: jurusan/index.blade.php
+    Fungsi: Halaman antarmuka manajemen jenis-jenis jurusan program kompetensi keahlian.
+    Memungkinkan penyisipan (tambah), pembaruan (edit lewat modal), dan menghapus data utama jurusan.
+--}}
 @extends('layouts.app')
 
 @section('content')

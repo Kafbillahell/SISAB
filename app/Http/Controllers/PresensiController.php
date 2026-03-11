@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class PresensiController extends Controller
 {
+    // Menampilkan halaman laporan dan rekapitulasi data presensi siswa
+    // Mengkalkulasi statistik kehadiran (persentase hadir, izin, sakit, alpa) berdasarkan filter rombel dan tanggal
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -129,6 +131,8 @@ class PresensiController extends Controller
         ));
     }
 
+    // Menampilkan halaman scanner untuk pemindaian kode QR presensi
+    // Menyesuaikan tampilan dan daftar siswa berdasarkan jadwal aktif hari ini sesuai peran (admin, guru, atau siswa)
     public function scanner(Request $request)
 {
     // 1. Ambil Waktu & Hari Real-time
@@ -222,6 +226,8 @@ class PresensiController extends Controller
     /**
      * AJAX: Return siswa list (id, nama_siswa, foto URL) for a rombel (only students in rombel)
      */
+    // Berfungsi sebagai endpoint AJAX untuk mengambil daftar siswa pada rombel tertentu
+    // Melampirkan informasi status kehadiran jika presensi untuk hari/jadwal tersebut sudah dicatat
     public function daftarSiswa(Request $request, $rombelId)
     {
         $jadwalId = $request->query('jadwal_id');
@@ -262,6 +268,8 @@ class PresensiController extends Controller
         return response()->json(['data' => $result]);
     }
 
+    // Memproses dan menyimpan data scan presensi (kode QR) dari pengguna
+    // Dilengkapi validasi rentang waktu jadwal, geolokasi (jarak radius), dan concurrency guard (database lock)
     public function store(Request $request)
     {
         $siswaId = $request->siswa_id;
@@ -403,6 +411,7 @@ class PresensiController extends Controller
         }
     }
 
+    // Penterjemah nama hari (Inggris ke Indonesia) untuk mempermudah pencocokan teks di database
     private function getHariIndo($day)
     {
         $map = [

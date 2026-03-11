@@ -1,3 +1,9 @@
+{{-- 
+    File: tahun_ajaran/index.blade.php
+    Fungsi: Manajemen data referensi Tahun Ajaran Pusat.
+    Memungkinkan admin untuk menambah tahun ajaran baru dan mengatur status
+    aktif/non-aktif ("Set Active") untuk menentukan tahun ajaran yang sedang berjalan.
+--}}
 @extends('layouts.app')
 
 @section('content')

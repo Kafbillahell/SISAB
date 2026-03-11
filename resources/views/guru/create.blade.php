@@ -1,3 +1,8 @@
+{{-- 
+    File: guru/create.blade.php
+    Fungsi: Menampilkan halaman berisi form untuk menambahkan profil detail guru baru 
+    secara manual serta proses pengaitan ke akun pengguna yang sudah ada di sistem.
+--}}
 @extends('layouts.app')
 
 @section('content')

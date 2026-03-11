@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 
 class PenilaianSikapController extends Controller
 {
+    // Menampilkan halaman utama untuk menu penilaian sikap (dashboard guru/admin)
+    // Menampilkan tabel siswa yang dapat dinilai dengan filter progres berdasarkan periode
     public function index()
     {
         // Only Admin and Guru can access
@@ -95,6 +97,7 @@ class PenilaianSikapController extends Controller
         ));
     }
 
+    // Menampilkan form untuk mengisi rincian penilaian sikap seorang siswa secara individual
     public function form($siswa_id)
     {
         if (auth()->user()->role !== 'admin' && auth()->user()->role !== 'guru') {
@@ -121,6 +124,7 @@ class PenilaianSikapController extends Controller
         return view('penilaian-sikap.form', compact('siswa', 'penilaian', 'periodes', 'periode_id'));
     }
 
+    // Memproses dan menyimpan data penilaian sikap individu yang disubmit melalui form
     public function store(Request $request, $siswa_id)
     {
         if (auth()->user()->role !== 'admin' && auth()->user()->role !== 'guru') {
@@ -164,6 +168,7 @@ class PenilaianSikapController extends Controller
             ->with('success', 'Penilaian sikap berhasil disimpan.');
     }
 
+    // Memproses penyimpanan penilaian secara massal untuk beberapa siswa sekaligus dengan nilai seragam
     public function storeMassal(Request $request)
     {
         if (auth()->user()->role !== 'admin' && auth()->user()->role !== 'guru') {
@@ -210,6 +215,7 @@ class PenilaianSikapController extends Controller
         return redirect()->back()->with('success', 'Penilaian massal berhasil disimpan.');
     }
 
+    // Menampilkan halaman detail riwayat penilaian sikap seorang siswa berdasarkan periode
     public function show($siswa_id)
     {
         if (auth()->user()->role !== 'admin' && auth()->user()->role !== 'guru') {

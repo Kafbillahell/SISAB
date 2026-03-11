@@ -1,3 +1,7 @@
+{{-- 
+    File: pages/index.blade.php
+    Fungsi: Berupa view kosong sebagai halaman beranda/dashboard default setelah pengguna login.
+--}}
 @extends('layouts.app')
 
 @section('title', 'Dashboard Utama')
