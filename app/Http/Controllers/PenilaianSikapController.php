@@ -13,34 +13,86 @@ class PenilaianSikapController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
+        // Check if user is Guru and Wali Kelas
+        $guru_id = null;
+        $rombel_id = null;
+        $is_wali_kelas = false;
+        $nama_kelas_wali = '';
+        
+        if (auth()->user()->role === 'guru') {
+            $guru = \App\Models\Guru::where('user_id', auth()->id())->first();
+            if ($guru) {
+                $guru_id = $guru->id;
+                $rombel = \App\Models\Rombel::where('guru_id', $guru_id)->first();
+                if ($rombel) {
+                    $is_wali_kelas = true;
+                    $rombel_id = $rombel->id;
+                    $kelas = \App\Models\Kelas::find($rombel->kelas_id);
+                    $nama_kelas_wali = $kelas ? $kelas->tingkat . ' ' . $kelas->nama_kelas : $rombel->nama_rombel;
+                }
+            }
+        }
+
         $jurusans = \App\Models\Jurusan::all();
         $semuaKelas = \App\Models\Kelas::all();
-        $periodes = \App\Models\Periode::where('is_active', true)->get();
+        
+        // Active Period (Current Period) logic handling
+        $periodes = \App\Models\Periode::all();
+        $active_periode = \App\Models\Periode::where('is_active', true)->first();
+        $selected_periode = request('periode_id', $active_periode ? $active_periode->id : null);
 
-        $query = \App\Models\Siswa::with(['user', 'anggotaRombels.rombel.kelas.jurusan']);
+        $query = \App\Models\Siswa::with(['user', 'anggotaRombels.rombel.kelas.jurusan'])
+            ->orderBy('nama_siswa', 'asc');
 
-        // Filter Jurusan
-        if (request()->filled('jurusan_id')) {
-            $query->whereHas('anggotaRombels.rombel.kelas', function ($q) {
-                $q->where('jurusan_id', request('jurusan_id'));
+        // Jika dia wali kelas, paksa query hanya untuk rombel miliknya
+        if ($is_wali_kelas) {
+            $query->whereHas('anggotaRombels', function ($q) use ($rombel_id) {
+                $q->where('rombel_id', $rombel_id);
             });
+            $siswas = $query->get();
+        } else {
+            // Untuk Admin/Bukan Wali Kelas: Wajib pilih Kelas dulu agar tidak memuat semua data siswa
+            if (request()->filled('kelas_id')) {
+                $query->whereHas('anggotaRombels.rombel', function ($q) {
+                    $q->where('kelas_id', request('kelas_id'));
+                });
+                
+                // Tambahan proteksi filter Jurusan
+                if (request()->filled('jurusan_id')) {
+                    $query->whereHas('anggotaRombels.rombel.kelas', function ($q) {
+                        $q->where('jurusan_id', request('jurusan_id'));
+                    });
+                }
+                
+                $siswas = $query->get();
+            } else {
+                // Return empty collection jika belum pilih kelas
+                $siswas = collect();
+            }
         }
 
-        // Filter Kelas
-        if (request()->filled('kelas_id')) {
-            $query->whereHas('anggotaRombels.rombel', function ($q) {
-                $q->where('kelas_id', request('kelas_id'));
-            });
-        }
+        // Hitung Progress Penilaian untuk Guru/Wali Kelas
+        $total_siswa = $siswas->count();
+        $siswa_dinilai = 0;
+        $progress_percentage = 0;
 
-        $siswas = $query->get();
+        if ($selected_periode && $total_siswa > 0) {
+            $siswa_ids = $siswas->pluck('id')->toArray();
+            $dinilai_count = \App\Models\PenilaianSikap::whereIn('siswa_id', $siswa_ids)
+                                ->where('periode_id', $selected_periode)
+                                ->count();
+            $siswa_dinilai = $dinilai_count;
+            $progress_percentage = ($siswa_dinilai / $total_siswa) * 100;
+        }
 
         // Pass selected filters for the view to retain selected state
         $selected_jurusan = request('jurusan_id');
         $selected_kelas = request('kelas_id');
-        $selected_periode = request('periode_id');
         
-        return view('penilaian-sikap.index', compact('siswas', 'jurusans', 'semuaKelas', 'periodes', 'selected_jurusan', 'selected_kelas', 'selected_periode'));
+        return view('penilaian-sikap.index', compact(
+            'siswas', 'jurusans', 'semuaKelas', 'periodes', 'selected_jurusan', 'selected_kelas', 'selected_periode',
+            'is_wali_kelas', 'nama_kelas_wali', 'total_siswa', 'siswa_dinilai', 'progress_percentage', 'active_periode'
+        ));
     }
 
     public function form($siswa_id)
@@ -85,7 +137,7 @@ class PenilaianSikapController extends Controller
             'catatan' => 'nullable|string'
         ]);
 
-        \App\Models\PenilaianSikap::updateOrCreate(
+        $penilaian = \App\Models\PenilaianSikap::updateOrCreate(
             ['siswa_id' => $siswa_id, 'periode_id' => $request->periode_id],
             [
                 'penilai_id' => auth()->id(),
@@ -98,7 +150,18 @@ class PenilaianSikapController extends Controller
             ]
         );
 
-        return redirect()->route('penilaian-sikap.index')->with('success', 'Penilaian sikap berhasil disimpan.');
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Penilaian sikap berhasil disimpan.',
+                'data' => $penilaian
+            ]);
+        }
+
+        // Redirect kembali ke detail siswa, bukan ke list utama 
+        // Mengingat list utama butuh param "?kelas_id=" untuk filter Admin
+        return redirect()->route('penilaian-sikap.show', ['siswa_id' => $siswa_id, 'periode_id' => $request->periode_id])
+            ->with('success', 'Penilaian sikap berhasil disimpan.');
     }
 
     public function show($siswa_id)

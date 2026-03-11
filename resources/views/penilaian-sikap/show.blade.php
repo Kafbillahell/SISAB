@@ -41,83 +41,93 @@
                     <a href="{{ route('penilaian-sikap.form', ['siswa_id' => $siswa->id, 'periode_id' => request('periode_id')]) }}" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i> Edit Nilai</a>
                 </div>
                 <div class="card-body">
-                    @forelse($penilaians as $penilaian)
-                        <div class="mb-4 pb-4 border-bottom">
-                            <h5 class="font-weight-bold row align-items-center">
-                                <div class="col">
-                                    <i class="fas fa-calendar-alt text-primary mr-2"></i> {{ $penilaian->periode->nama_periode }}
-                                </div>
-                                <div class="col-auto">
-                                    <span class="badge badge-info text-right" style="font-size: 14px;">Penilai: {{ $penilaian->penilai->name }}</span>
-                                </div>
-                            </h5>
-                            <div class="table-responsive mt-3">
-                                <table class="table table-hover table-bordered">
-                                    <thead class="bg-gray-100">
-                                        <tr>
-                                            <th>Aspek Penilaian</th>
-                                            <th width="120" class="text-center">Skor (1-5)</th>
-                                        </tr>
-                                    </thead>
-                                <tbody>
-                                    <tr>
-                                        <td class="align-middle"><strong>1. Tanggung Jawab</strong><br><small class="text-muted">Mampu menyelesaikan tugas yang diberikan dan mengakui kesalahan jika ada.</small></td>
-                                        <td class="text-center align-middle">
-                                            <span class="badge badge-{{ $penilaian->tanggung_jawab >= 4 ? 'success' : ($penilaian->tanggung_jawab == 3 ? 'warning' : 'danger') }} p-2" style="font-size: 14px; min-width: 40px;">
-                                                {{ $penilaian->tanggung_jawab }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="align-middle"><strong>2. Kejujuran</strong><br><small class="text-muted">Tidak menyontek saat ujian atau mengakui hasil karya sendiri.</small></td>
-                                        <td class="text-center align-middle">
-                                            <span class="badge badge-{{ $penilaian->kejujuran >= 4 ? 'success' : ($penilaian->kejujuran == 3 ? 'warning' : 'danger') }} p-2" style="font-size: 14px; min-width: 40px;">
-                                                {{ $penilaian->kejujuran }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="align-middle"><strong>3. Sopan Santun (Etika)</strong><br><small class="text-muted">Cara siswa berkomunikasi dengan baik kepada guru dan sesama teman.</small></td>
-                                        <td class="text-center align-middle">
-                                            <span class="badge badge-{{ $penilaian->sopan_santun >= 4 ? 'success' : ($penilaian->sopan_santun == 3 ? 'warning' : 'danger') }} p-2" style="font-size: 14px; min-width: 40px;">
-                                                {{ $penilaian->sopan_santun }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="align-middle"><strong>4. Kemandirian</strong><br><small class="text-muted">Sejauh mana siswa bisa mengerjakan tugas tanpa selalu bergantung pada orang lain.</small></td>
-                                        <td class="text-center align-middle">
-                                            <span class="badge badge-{{ $penilaian->kemandirian >= 4 ? 'success' : ($penilaian->kemandirian == 3 ? 'warning' : 'danger') }} p-2" style="font-size: 14px; min-width: 40px;">
-                                                {{ $penilaian->kemandirian }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="align-middle"><strong>5. Kerja Sama (Gotong Royong)</strong><br><small class="text-muted">Kemampuan siswa untuk bekerja dengan baik dalam tim atau kelompok.</small></td>
-                                        <td class="text-center align-middle">
-                                            <span class="badge badge-{{ $penilaian->kerja_sama >= 4 ? 'success' : ($penilaian->kerja_sama == 3 ? 'warning' : 'danger') }} p-2" style="font-size: 14px; min-width: 40px;">
-                                                {{ $penilaian->kerja_sama }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                                </table>
-                            </div>
+                    {{-- TAB NAVIGASI --}}
+                    <ul class="nav nav-tabs mb-4" id="penilaianTab" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="grafik-tab" data-toggle="tab" href="#grafik" role="tab" aria-controls="grafik" aria-selected="true"><i class="fas fa-chart-pie mr-2"></i>Grafik Sikap (Radar)</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="riwayat-tab" data-toggle="tab" href="#riwayat" role="tab" aria-controls="riwayat" aria-selected="false"><i class="fas fa-history mr-2"></i>Riwayat & Feedback</a>
+                        </li>
+                    </ul>
 
-                            <hr>
-                            <h6 class="font-weight-bold">Catatan:</h6>
-                            <div class="p-3 bg-light rounded border" style="min-height: 80px;">
-                                {{ $penilaian->catatan ?: 'Tidak ada catatan untuk siswa ini.' }}
-                            </div>
+                    <div class="tab-content" id="penilaianTabContent">
+                        {{-- TAB GRAFIK RADAR --}}
+                        <div class="tab-pane fade show active" id="grafik" role="tabpanel" aria-labelledby="grafik-tab">
+                            @if($penilaians->count() > 0)
+                                @php
+                                    // Ambil penilaian terbaru untuk grafik
+                                    $penilaianTerbaru = $penilaians->first();
+                                    $labels = ['Tanggung Jawab', 'Kejujuran', 'Sopan Santun', 'Kemandirian', 'Kerja Sama'];
+                                    $dataScores = [
+                                        $penilaianTerbaru->tanggung_jawab,
+                                        $penilaianTerbaru->kejujuran,
+                                        $penilaianTerbaru->sopan_santun,
+                                        $penilaianTerbaru->kemandirian,
+                                        $penilaianTerbaru->kerja_sama
+                                    ];
+                                @endphp
+                                <div class="text-center mb-4">
+                                    <h5 class="font-weight-bold text-gray-800">Pemetaan Sikap: {{ $penilaianTerbaru->periode->nama_periode }}</h5>
+                                    <p class="text-muted small">Visualisasi area sikap dominan dan yang perlu ditingkatkan (Skala 1-5)</p>
+                                </div>
+                                <div class="chart-area d-flex justify-content-center align-items-center" style="height: 350px;">
+                                    <canvas id="radarChart"></canvas>
+                                </div>
+                                <div class="mt-4 text-center">
+                                    <span class="badge badge-info px-3 py-2"><i class="fas fa-info-circle mr-1"></i> Semakin luas jaring, semakin seimbang sikap siswa.</span>
+                                </div>
+                            @else
+                                <div class="text-center py-5">
+                                    <i class="fas fa-chart-area fa-3x text-gray-300 mb-3"></i>
+                                    <h5 class="text-muted">Data grafik belum tersedia.</h5>
+                                </div>
+                            @endif
                         </div>
-                    @empty
-                        <div class="text-center py-5">
-                            <i class="fas fa-clipboard-list fa-3x text-gray-300 mb-3"></i>
-                            <h5 class="text-muted">Siswa ini belum memiliki penilaian sikap untuk periode yang dipilih.</h5>
-                            <p class="mb-4">Silakan berikan penilaian pertama kali.</p>
-                            <a href="{{ route('penilaian-sikap.form', ['siswa_id' => $siswa->id, 'periode_id' => request('periode_id')]) }}" class="btn btn-primary"><i class="fas fa-plus mr-1"></i> Beri Penilaian Sekarang</a>
+
+                        {{-- TAB RIWAYAT TIMELINE --}}
+                        <div class="tab-pane fade" id="riwayat" role="tabpanel" aria-labelledby="riwayat-tab">
+                            @forelse($penilaians as $penilaian)
+                                <div class="timeline-item mb-4 pb-4 border-bottom position-relative pl-4" style="border-left: 3px solid #4e73df;">
+                                    <div class="position-absolute bg-primary rounded-circle" style="width: 15px; height: 15px; left: -9px; top: 5px; border: 3px solid white;"></div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h5 class="font-weight-bold text-primary mb-0">
+                                            <i class="fas fa-calendar-alt mr-2"></i> {{ $penilaian->periode->nama_periode }}
+                                        </h5>
+                                        <span class="badge badge-light border text-dark">
+                                            Penilai: {{ $penilaian->penilai->name }} | {{ $penilaian->created_at->format('d M Y') }}
+                                        </span>
+                                    </div>
+    
+                                    <div class="row mt-3">
+                                        <div class="col-md-6 mb-3">
+                                            <h6 class="font-weight-bold text-gray-800 text-sm mb-2">Rincian Skor</h6>
+                                            <div class="d-flex flex-wrap">
+                                                <div class="badge badge-{{ $penilaian->tanggung_jawab >= 4 ? 'success' : 'warning' }} mr-2 mb-2 p-2">Tgjwb: {{ $penilaian->tanggung_jawab }}</div>
+                                                <div class="badge badge-{{ $penilaian->kejujuran >= 4 ? 'success' : 'warning' }} mr-2 mb-2 p-2">Jujur: {{ $penilaian->kejujuran }}</div>
+                                                <div class="badge badge-{{ $penilaian->sopan_santun >= 4 ? 'success' : 'warning' }} mr-2 mb-2 p-2">Sopan: {{ $penilaian->sopan_santun }}</div>
+                                                <div class="badge badge-{{ $penilaian->kemandirian >= 4 ? 'success' : 'warning' }} mr-2 mb-2 p-2">Mandiri: {{ $penilaian->kemandirian }}</div>
+                                                <div class="badge badge-{{ $penilaian->kerja_sama >= 4 ? 'success' : 'warning' }} mr-2 mb-2 p-2">Kerjasama: {{ $penilaian->kerja_sama }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="font-weight-bold text-gray-800 text-sm mb-2">Catatan Feedback</h6>
+                                            <div class="p-3 bg-light rounded border border-left-info" style="min-height: 80px; font-size: 0.9rem;">
+                                                {!! nl2br(e($penilaian->catatan ?: 'Tidak ada catatan/feedback untuk periode ini.')) !!}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="text-center py-5">
+                                    <i class="fas fa-history fa-3x text-gray-300 mb-3"></i>
+                                    <h5 class="text-muted">Siswa ini belum memiliki riwayat penilaian sikap.</h5>
+                                    <p class="mb-4">Silakan berikan penilaian pertama kali melalui halaman daftar kelas.</p>
+                                </div>
+                            @endforelse
                         </div>
-                    @endforelse
+                    </div>
                 </div>
             </div>
         </div>
@@ -209,3 +219,64 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        @if($penilaians->count() > 0)
+        const ctx = document.getElementById('radarChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: {!! json_encode($labels ?? []) !!},
+                    datasets: [{
+                        label: 'Skor Sikap',
+                        data: {!! json_encode($dataScores ?? []) !!},
+                        backgroundColor: 'rgba(78, 115, 223, 0.2)',
+                        borderColor: 'rgba(78, 115, 223, 1)',
+                        pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(78, 115, 223, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 5,
+                            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                            pointLabels: {
+                                font: { size: 14, family: "'Nunito', sans-serif", weight: 'bold' },
+                                color: '#5a5c69'
+                            },
+                            ticks: {
+                                stepSize: 1,
+                                display: false // Sembunyikan angka di tengah mesh
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleFont: { size: 14 },
+                            bodyFont: { size: 14 },
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) { return context.label + ': ' + context.raw + ' / 5 Skor'; }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        @endif
+    });
+</script>
+@endpush
