@@ -164,6 +164,52 @@ class PenilaianSikapController extends Controller
             ->with('success', 'Penilaian sikap berhasil disimpan.');
     }
 
+    public function storeMassal(Request $request)
+    {
+        if (auth()->user()->role !== 'admin' && auth()->user()->role !== 'guru') {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $request->validate([
+            'periode_id' => 'required|exists:periodes,id',
+            'siswa_ids' => 'required|array|min:1',
+            'siswa_ids.*' => 'exists:siswas,id',
+            'tanggung_jawab' => 'required|integer|min:1|max:5',
+            'kejujuran' => 'required|integer|min:1|max:5',
+            'sopan_santun' => 'required|integer|min:1|max:5',
+            'kemandirian' => 'required|integer|min:1|max:5',
+            'kerja_sama' => 'required|integer|min:1|max:5',
+            'catatan' => 'nullable|string'
+        ]);
+
+        $penilais = [];
+        foreach ($request->siswa_ids as $siswa_id) {
+            $penilai = \App\Models\PenilaianSikap::updateOrCreate(
+                ['siswa_id' => $siswa_id, 'periode_id' => $request->periode_id],
+                [
+                    'penilai_id' => auth()->id(),
+                    'tanggung_jawab' => $request->tanggung_jawab,
+                    'kejujuran' => $request->kejujuran,
+                    'sopan_santun' => $request->sopan_santun,
+                    'kemandirian' => $request->kemandirian,
+                    'kerja_sama' => $request->kerja_sama,
+                    'catatan' => $request->catatan,
+                ]
+            );
+            $penilais[] = $penilai;
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Penilaian sikap massal berhasil disimpan.',
+                'data' => $penilais
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Penilaian massal berhasil disimpan.');
+    }
+
     public function show($siswa_id)
     {
         if (auth()->user()->role !== 'admin' && auth()->user()->role !== 'guru') {

@@ -83,6 +83,7 @@ Route::middleware(['auth'])->group(function () {
 
     // --- Penilaian Sikap ---
     Route::get('/penilaian-sikap', [\App\Http\Controllers\PenilaianSikapController::class, 'index'])->name('penilaian-sikap.index');
+    Route::post('/penilaian-sikap/store-massal', [\App\Http\Controllers\PenilaianSikapController::class, 'storeMassal'])->name('penilaian-sikap.storeMassal');
     Route::get('/penilaian-sikap/{siswa_id}/form', [\App\Http\Controllers\PenilaianSikapController::class, 'form'])->name('penilaian-sikap.form');
     Route::post('/penilaian-sikap/{siswa_id}/store', [\App\Http\Controllers\PenilaianSikapController::class, 'store'])->name('penilaian-sikap.store');
     Route::get('/penilaian-sikap/{siswa_id}/show', [\App\Http\Controllers\PenilaianSikapController::class, 'show'])->name('penilaian-sikap.show');

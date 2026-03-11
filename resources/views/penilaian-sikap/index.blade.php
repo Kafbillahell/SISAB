@@ -83,6 +83,19 @@
     </div>
     @endif
 
+    {{-- AKSI MASSAL --}}
+    @if(count($siswas) > 0)
+    <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-3 rounded shadow-sm border-left-info">
+        <div class="custom-control custom-checkbox" style="cursor: pointer;">
+            <input type="checkbox" class="custom-control-input" id="checkAllSiswa" onchange="toggleAllSiswa(this)">
+            <label class="custom-control-label font-weight-bold" for="checkAllSiswa" style="cursor: pointer;">Pilih Semua Siswa <span class="text-muted font-weight-normal small ml-2" id="selectedCountText">(0 terpilih)</span></label>
+        </div>
+        <button type="button" class="btn btn-info btn-sm shadow-sm" id="btnSikapMassal" disabled onclick="openFastInputMassalModal()">
+            <i class="fas fa-tasks fa-sm mr-1"></i> Nilai Terpilih
+        </button>
+    </div>
+    @endif
+
     {{-- GRID KARTU SISWA --}}
     <div class="row">
         @forelse($siswas as $siswa)
@@ -116,6 +129,12 @@
                             </div>
                             <div class="h6 mb-0 font-weight-bold text-gray-800 text-truncate" title="{{ strtoupper($siswa->nama_siswa) }}">
                                 {{ strtoupper($siswa->nama_siswa) }}
+                            </div>
+                        </div>
+                        <div class="col-auto pl-2" onclick="event.stopPropagation()">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input chk-siswa" id="chkSiswa_{{ $siswa->id }}" value="{{ $siswa->id }}" onchange="updateSelectedCount()">
+                                <label class="custom-control-label" for="chkSiswa_{{ $siswa->id }}" style="cursor: pointer; padding-top: 5px;"></label>
                             </div>
                         </div>
                     </div>
@@ -169,6 +188,97 @@
             </div>
         </div>
         @endforelse
+    </div>
+
+    {{-- FAST INPUT MASSAL MODAL --}}
+    <div class="modal fade" id="fastInputMassalModal" tabindex="-1" role="dialog" aria-labelledby="fastInputMassalModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-info text-white text-center pb-4" style="border-radius: 0.3rem 0.3rem 0 0; position: relative;">
+                    <div style="position: absolute; top: 15px; left: 0; width: 100%; display: flex; justify-content: center; z-index: 10;">
+                        <div class="rounded-circle shadow d-flex align-items-center justify-content-center bg-white" style="width: 80px; height: 80px; border: 4px solid white; transform: translateY(20px);">
+                            <i class="fas fa-users fa-3x text-info"></i>
+                        </div>
+                    </div>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="position: absolute; right: 15px; top: 15px; z-index: 20;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <div style="height: 30px;"></div>
+                </div>
+                <form id="fastInputMassalForm" method="POST">
+                    @csrf
+                    <input type="hidden" name="periode_id" value="{{ $selected_periode }}">
+                    <!-- Akan diisi array siswa_ids via JS -->
+                    <div id="hidden_siswa_ids_container"></div>
+                    
+                    <div class="modal-body pt-5 text-center">
+                        <h5 class="modal-title font-weight-bold text-dark mt-2">Penilaian Massal</h5>
+                        <p class="text-muted small mb-4" id="modal_massal_count">0 Siswa Terpilih</p>
+
+                        @php
+                            $aspekFast = [
+                                'tanggung_jawab' => ['Tanggung Jawab', 'Mengerjakan tugas & jujur mengakui salah'],
+                                'kejujuran' => ['Kejujuran', 'Tidak menyontek & orisinal'],
+                                'sopan_santun' => ['Sopan Santun', 'Etika & cara komunikasi baik'],
+                                'kemandirian' => ['Kemandirian', 'Mengerjakan tugas tanpa bergantung'],
+                                'kerja_sama' => ['Kerja Sama', 'Gotong royong dalam tim'],
+                            ];
+                        @endphp
+
+                        <div class="px-3 text-left">
+                            <div class="table-responsive mb-3">
+                                <table class="table table-borderless table-striped table-sm mb-0 align-middle">
+                                    <thead class="bg-gray-100 text-gray-800 text-center" style="font-size: 0.85rem;">
+                                        <tr>
+                                            <th class="text-left w-50 pl-3">Aspek Penilaian</th>
+                                            <th title="Sangat Kurang">1</th>
+                                            <th title="Kurang">2</th>
+                                            <th title="Cukup">3</th>
+                                            <th title="Baik">4</th>
+                                            <th title="Sangat Baik">5</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($aspekFast as $key => $info)
+                                            <tr>
+                                                <td class="pl-3 py-3 align-middle">
+                                                    <span class="font-weight-bold text-gray-800 d-block mb-1">{{ $info[0] }}</span>
+                                                    <small class="text-muted d-block" style="line-height: 1.2;">{{ $info[1] }}</small>
+                                                </td>
+                                                @php
+                                                    $skala = [1, 2, 3, 4, 5];
+                                                @endphp
+                                                @foreach($skala as $nilai)
+                                                    <td class="text-center align-middle">
+                                                        <div class="custom-control custom-radio d-inline-block">
+                                                            <input type="radio" id="skala_massal_{{ $key }}_{{ $nilai }}" name="{{ $key }}" value="{{ $nilai }}" class="custom-control-input" required>
+                                                            <label class="custom-control-label" for="skala_massal_{{ $key }}_{{ $nilai }}" style="cursor: pointer;"></label>
+                                                        </div>
+                                                    </td>
+                                                @endforeach
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between text-muted mt-2 px-3 pb-3 border-bottom" style="font-size: 0.75rem;">
+                                <span>* Skala: 1 (Sangat Kurang) s/d 5 (Sangat Baik)</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group text-left px-3 mt-2">
+                            <label for="modal_massal_catatan" class="font-weight-bold text-gray-800 small">Catatan Ekstra (Opsional)</label>
+                            <textarea class="form-control bg-light" id="modal_massal_catatan" name="catatan" rows="3" placeholder="Tulis catatan jika diperlukan..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-center bg-gray-100 border-top-0 py-3">
+                        <button type="button" class="btn btn-secondary px-4 rounded-pill" data-dismiss="modal">Batal</button>
+                        <button type="submit" id="btn_simpan_massal" class="btn btn-info px-4 rounded-pill"><i class="fas fa-save mr-1"></i> Simpan Massal</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     {{-- FAST INPUT MODAL --}}
@@ -478,6 +588,135 @@
             btnSimpanLanjut.innerHTML = originalTextLanjut;
             btnSimpan.disabled = false;
             btnSimpanLanjut.disabled = false;
+        });
+    }
+
+    // -- MASSAL LOGIC --
+    function toggleAllSiswa(source) {
+        const checkboxes = document.querySelectorAll('.chk-siswa');
+        checkboxes.forEach(cb => cb.checked = source.checked);
+        updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+        const selected = document.querySelectorAll('.chk-siswa:checked').length;
+        const total = document.querySelectorAll('.chk-siswa').length;
+        
+        document.getElementById('selectedCountText').innerText = `(${selected} terpilih)`;
+        document.getElementById('btnSikapMassal').disabled = selected === 0;
+        
+        const checkAll = document.getElementById('checkAllSiswa');
+        if (!checkAll) return;
+
+        if (selected > 0 && selected === total && total > 0) {
+            checkAll.checked = true;
+            checkAll.indeterminate = false;
+        } else if (selected > 0 && selected < total) {
+            checkAll.checked = false;
+            checkAll.indeterminate = true;
+        } else {
+            checkAll.checked = false;
+            checkAll.indeterminate = false;
+        }
+    }
+
+    function openFastInputMassalModal() {
+        const defaultPeriode = "{{ $selected_periode }}";
+        if (!defaultPeriode) {
+            alert('Silakan pilih Periode Penilaian terlebih dahulu di bagian filter atas!');
+            return;
+        }
+
+        const selectedCheckboxes = document.querySelectorAll('.chk-siswa:checked');
+        if (selectedCheckboxes.length === 0) return;
+
+        document.getElementById('modal_massal_count').innerText = `${selectedCheckboxes.length} Siswa Terpilih`;
+        document.getElementById('fastInputMassalForm').reset();
+        
+        const container = document.getElementById('hidden_siswa_ids_container');
+        container.innerHTML = '';
+        selectedCheckboxes.forEach(cb => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'siswa_ids[]';
+            input.value = cb.value;
+            container.appendChild(input);
+        });
+
+        document.getElementById('fastInputMassalForm').action = `{{ route('penilaian-sikap.storeMassal') }}`;
+        $('#fastInputMassalModal').modal('show');
+    }
+
+    document.getElementById('fastInputMassalForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveAssessmentMassal();
+    });
+
+    function saveAssessmentMassal() {
+        const form = document.getElementById('fastInputMassalForm');
+        
+        const aspects = ['tanggung_jawab', 'kejujuran', 'sopan_santun', 'kemandirian', 'kerja_sama'];
+        let isValid = true;
+        aspects.forEach(aspect => {
+            if (!form.querySelector(`input[name="${aspect}"]:checked`)) isValid = false;
+        });
+
+        if (!isValid) {
+            Swal.fire({
+                title: 'Data Belum Lengkap!',
+                text: 'Mohon isi semua lima aspek penilaian untuk penilaian massal ini.',
+                icon: 'warning',
+                confirmButtonColor: '#4e73df',
+                confirmButtonText: 'Oke'
+            });
+            return;
+        }
+
+        const formData = new FormData(form);
+        const actionUrl = form.action;
+        const btnSimpan = document.getElementById('btn_simpan_massal');
+        const originalTextSimpan = btnSimpan.innerHTML;
+        
+        btnSimpan.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...';
+        btnSimpan.disabled = true;
+
+        fetch(actionUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json, text/plain, */*'
+            }
+        })
+        .then(response => {
+            if (response.redirected) return { success: true };
+            return response.json().catch(err => { return { success: true }; });
+        })
+        .then(data => {
+            Swal.fire({
+                title: 'Berhasil!',
+                text: 'Penilaian massal telah disimpan.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                $('#fastInputMassalModal').modal('hide');
+                btnSimpan.innerHTML = originalTextSimpan;
+                btnSimpan.disabled = false;
+                window.location.reload(); 
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                title: 'Terjadi Kesalahan!',
+                text: 'Gagal menyimpan data penilaian massal.',
+                icon: 'error',
+                confirmButtonColor: '#e74a3b',
+                confirmButtonText: 'Tutup'
+            });
+            btnSimpan.innerHTML = originalTextSimpan;
+            btnSimpan.disabled = false;
         });
     }
 </script>
