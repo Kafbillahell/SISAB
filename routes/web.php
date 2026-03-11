@@ -14,7 +14,8 @@ use App\Http\Controllers\{
     AnggotaRombelController,
     PresensiController,
     JurusanController,
-    SesiController
+    SesiController,
+    SettingController
 };
 
 
@@ -85,4 +86,8 @@ Route::middleware(['auth'])->group(function () {
     // Manual input untuk wali kelas: Sakit / Izin / Alpa
     Route::get('/presensi/manual', [\App\Http\Controllers\ManualPresensiController::class, 'index'])->name('presensi.manual');
     Route::post('/presensi/manual', [\App\Http\Controllers\ManualPresensiController::class, 'store'])->name('presensi.manual.store');
+
+    // --- Pengaturan Lokasi (GPS) ---
+    Route::get('/settings/lokasi', [SettingController::class, 'index'])->name('settings.lokasi');
+    Route::post('/settings/lokasi', [SettingController::class, 'update'])->name('settings.lokasi.update');
 });

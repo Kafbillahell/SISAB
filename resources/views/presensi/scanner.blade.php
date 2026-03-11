@@ -147,6 +147,21 @@
 
     // DATA SISWA: ambil via AJAX hanya dari rombel aktif (mengurangi payload global)
     let students = [];
+    let userCoords = null; // Menyimpan koordinat GPS terakhir secara pasif
+
+    // Mulai lacak lokasi di latar belakang agar "siap saji" saat wajah terdeteksi
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition((position) => {
+            userCoords = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                timestamp: position.timestamp
+            };
+        }, (err) => {
+            console.error("GPS Error:", err.message);
+        }, { enableHighAccuracy: true, maximumAge: 10000 });
+    }
+
     async function fetchStudentsForRombel(rombelId) {
         try {
             const jadwalQuery = "{{ $jadwalAktif->id ?? '' }}" ? `?jadwal_id={{ $jadwalAktif->id }}` : '';
@@ -263,22 +278,36 @@
     }
 
     async function handleAbsensi(siswaId, nama) {
+        if (!userCoords) {
+            showErrorVisual("GPS belum mengunci lokasi. Tunggu sebentar...");
+            return;
+        }
+
+        // Cek jika lokasi sudah terlalu lama (lebih dari 1 menit)
+        const now = Date.now();
+        if (now - userCoords.timestamp > 60000) {
+            showErrorVisual("Sinyal GPS lemah atau tidak terupdate.");
+            return;
+        }
+
         isProcessing = true;
         result.className = "badge badge-warning shadow-lg px-4 py-3";
-        result.innerHTML = `<i class="fas fa-user-check mr-2"></i> Mencatat: ${nama}...`;
+        result.innerHTML = `<i class="fas fa-satellite-dish fa-spin mr-2"></i> Mencatat: ${nama}...`;
 
-            try {
+        try {
             const response = await fetch("{{ route('presensi.store') }}", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                 body: JSON.stringify({
                     siswa_id: siswaId,
-                    jadwal_id: "{{ $jadwalAktif->id }}"
+                    jadwal_id: "{{ $jadwalAktif->id }}",
+                    lat: userCoords.lat,
+                    lng: userCoords.lng
                 })
             });
 
             const data = await response.json();
-                if (data.status === 'success') {
+            if (data.status === 'success') {
                 result.className = "badge badge-success shadow-lg px-4 py-3";
                 result.innerHTML = `<i class="fas fa-check-double mr-2"></i> Hadir: ${nama}`;
                 
@@ -288,23 +317,27 @@
 
                 scannerWrapper.style.borderColor = "#28a745";
                 setTimeout(() => { scannerWrapper.style.borderColor = "#fff"; }, 2000);
-                } else if (data.status === 'blocked' || response.status === 409) {
-                    // Server blocked since there's a manual presensi (Izin/Sakit/Alpa)
-                    showManualWarning(`${nama}: ${data.message || 'Terdaftar presensi manual.'}`);
-                    // Refresh students cache so next detections reflect manual state
-                    if ("{{ $jadwalAktif->rombel->id ?? '' }}") {
-                        await fetchStudentsForRombel({{ $jadwalAktif->rombel->id }});
-                    }
-                } else if (data.status === 'exists') {
-                    result.className = "badge badge-info shadow-lg px-4 py-3";
-                    result.innerHTML = `<i class="fas fa-info-circle mr-2"></i> ${nama} Sudah Absen`;
-                } else {
-                    result.innerHTML = `<i class="fas fa-info-circle mr-2"></i> ${data.message || (nama + ' Sudah Absen')}`;
+            } else if (data.status === 'out_of_range') {
+                showManualWarning(`${nama}: Di luar radius! (${data.distance}m)`);
+            } else if (data.status === 'blocked' || response.status === 409) {
+                showManualWarning(`${nama}: ${data.message || 'Terdaftar presensi manual.'}`);
+                if ("{{ $jadwalAktif->rombel->id ?? '' }}") {
+                    await fetchStudentsForRombel({{ $jadwalAktif->rombel->id }});
                 }
+            } else if (data.status === 'exists') {
+                result.className = "badge badge-info shadow-lg px-4 py-3";
+                result.innerHTML = `<i class="fas fa-info-circle mr-2"></i> ${nama} Sudah Absen`;
+            } else {
+                result.innerHTML = `<i class="fas fa-info-circle mr-2"></i> ${data.message || (nama + ' Sudah Absen')}`;
+            }
         } catch (e) {
             result.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i> Koneksi Gagal`;
         }
 
+        finalizeProcessing();
+    }
+
+    function finalizeProcessing() {
         setTimeout(() => {
             isProcessing = false;
             result.className = "badge badge-primary shadow-lg px-4 py-3";
