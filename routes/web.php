@@ -16,7 +16,8 @@ use App\Http\Controllers\{
     JurusanController,
     SesiController,
     SettingController,
-    ManualPresensiController 
+    ManualPresensiController,
+    PeriodeController
 };
 
 // --- Rute API AJAX ---
@@ -85,6 +86,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/penilaian-sikap/{siswa_id}/form', [\App\Http\Controllers\PenilaianSikapController::class, 'form'])->name('penilaian-sikap.form');
     Route::post('/penilaian-sikap/{siswa_id}/store', [\App\Http\Controllers\PenilaianSikapController::class, 'store'])->name('penilaian-sikap.store');
     Route::get('/penilaian-sikap/{siswa_id}/show', [\App\Http\Controllers\PenilaianSikapController::class, 'show'])->name('penilaian-sikap.show');
+
+    // --- Manajemen Periode ---
+    Route::resource('periode', PeriodeController::class)->except(['create', 'show', 'edit']);
 
     // --- Pengaturan Lokasi (GPS) ---
     Route::get('/settings/lokasi', [SettingController::class, 'index'])->name('settings.lokasi');

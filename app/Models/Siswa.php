@@ -33,4 +33,9 @@ class Siswa extends Model
     // Ini memberitahu Laravel bahwa satu Siswa memiliki banyak data di tabel Presensi
     return $this->hasMany(Presensi::class, 'siswa_id');
 }
+
+    public function anggotaRombels()
+    {
+        return $this->hasMany(AnggotaRombel::class, 'siswa_id');
+    }
 }

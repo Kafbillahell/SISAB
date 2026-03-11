@@ -22,6 +22,24 @@
                                 <strong>Panduan Nilai:</strong> 1 (Sangat Kurang), 2 (Kurang), 3 (Cukup), 4 (Baik), 5 (Sangat Baik)
                             </small>
                         </div>
+
+                        <div class="form-group row align-items-center mb-3">
+                            <label class="col-sm-5 col-form-label font-weight-bold" for="periode_id">Periode Penilaian <span class="text-danger">*</span></label>
+                            <div class="col-sm-7">
+                                <select name="periode_id" id="periode_id" class="form-control @error('periode_id') is-invalid @enderror" required>
+                                    <option value="">-- Pilih Periode --</option>
+                                    @foreach($periodes as $periode)
+                                        <option value="{{ $periode->id }}" {{ (old('periode_id', $periode_id) == $periode->id) ? 'selected' : '' }}>
+                                            {{ $periode->nama_periode }} {{ $periode->is_active ? '(Aktif)' : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('periode_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        <hr class="mt-2 mb-3">
                         
                         @php
                             $aspek = [

@@ -9,21 +9,56 @@
 
     <div class="row">
         <div class="col-xl-8 col-lg-8 d-flex flex-column">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-filter mr-2"></i>Filter Data Penilaian</h6>
+                </div>
+                <div class="card-body">
+                    <form action="{{ route('penilaian-sikap.show', $siswa->id) }}" method="GET">
+                        <div class="row">
+                            <div class="col-md-9 mb-3">
+                                <label for="periode_id" class="font-weight-bold">Periode Penilaian</label>
+                                <select name="periode_id" id="periode_id" class="form-control" onchange="this.form.submit()">
+                                    <option value="">-- Semua Periode --</option>
+                                    @foreach($periodes as $periode)
+                                        <option value="{{ $periode->id }}" {{ request('periode_id') == $periode->id ? 'selected' : '' }}>
+                                            {{ $periode->nama_periode }} {{ $periode->is_active ? '(Aktif)' : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search mr-1"></i> Tampilkan</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="card shadow mb-4 flex-grow-1">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-primary">Hasil Penilaian</h6>
-                    <a href="{{ route('penilaian-sikap.form', $siswa->id) }}" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i> Edit Nilai</a>
+                    <a href="{{ route('penilaian-sikap.form', ['siswa_id' => $siswa->id, 'periode_id' => request('periode_id')]) }}" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i> Edit Nilai</a>
                 </div>
                 <div class="card-body">
-                    @if($penilaian)
-                        <div class="table-responsive">
-                            <table class="table table-hover table-bordered">
-                                <thead class="bg-gray-100">
-                                    <tr>
-                                        <th>Aspek Penilaian</th>
-                                        <th width="120" class="text-center">Skor (1-5)</th>
-                                    </tr>
-                                </thead>
+                    @forelse($penilaians as $penilaian)
+                        <div class="mb-4 pb-4 border-bottom">
+                            <h5 class="font-weight-bold row align-items-center">
+                                <div class="col">
+                                    <i class="fas fa-calendar-alt text-primary mr-2"></i> {{ $penilaian->periode->nama_periode }}
+                                </div>
+                                <div class="col-auto">
+                                    <span class="badge badge-info text-right" style="font-size: 14px;">Penilai: {{ $penilaian->penilai->name }}</span>
+                                </div>
+                            </h5>
+                            <div class="table-responsive mt-3">
+                                <table class="table table-hover table-bordered">
+                                    <thead class="bg-gray-100">
+                                        <tr>
+                                            <th>Aspek Penilaian</th>
+                                            <th width="120" class="text-center">Skor (1-5)</th>
+                                        </tr>
+                                    </thead>
                                 <tbody>
                                     <tr>
                                         <td class="align-middle"><strong>1. Tanggung Jawab</strong><br><small class="text-muted">Mampu menyelesaikan tugas yang diberikan dan mengakui kesalahan jika ada.</small></td>
@@ -66,23 +101,23 @@
                                         </td>
                                     </tr>
                                 </tbody>
-                            </table>
-                        </div>
+                                </table>
+                            </div>
 
-                        <hr>
-                        <h6 class="font-weight-bold">Catatan:</h6>
-                        <div class="p-3 bg-light rounded border" style="min-height: 80px;">
-                            {{ $penilaian->catatan ?: 'Tidak ada catatan untuk siswa ini.' }}
+                            <hr>
+                            <h6 class="font-weight-bold">Catatan:</h6>
+                            <div class="p-3 bg-light rounded border" style="min-height: 80px;">
+                                {{ $penilaian->catatan ?: 'Tidak ada catatan untuk siswa ini.' }}
+                            </div>
                         </div>
-
-                    @else
+                    @empty
                         <div class="text-center py-5">
                             <i class="fas fa-clipboard-list fa-3x text-gray-300 mb-3"></i>
-                            <h5 class="text-muted">Siswa ini belum memiliki penilaian sikap.</h5>
+                            <h5 class="text-muted">Siswa ini belum memiliki penilaian sikap untuk periode yang dipilih.</h5>
                             <p class="mb-4">Silakan berikan penilaian pertama kali.</p>
-                            <a href="{{ route('penilaian-sikap.form', $siswa->id) }}" class="btn btn-primary"><i class="fas fa-plus mr-1"></i> Beri Penilaian Sekarang</a>
+                            <a href="{{ route('penilaian-sikap.form', ['siswa_id' => $siswa->id, 'periode_id' => request('periode_id')]) }}" class="btn btn-primary"><i class="fas fa-plus mr-1"></i> Beri Penilaian Sekarang</a>
                         </div>
-                    @endif
+                    @endforelse
                 </div>
             </div>
         </div>
@@ -110,9 +145,10 @@
                             <span class="float-right">{{ $siswa->jenis_kelamin == 'L' ? 'Laki-laki' : 'Perempuan' }}</span>
                         </li>
                         <li class="list-group-item px-0">
-                            <strong>Predikat:</strong>
-                            @if($penilaian)
+                            <strong>Predikat (Penilaian Terakhir):</strong>
+                            @if($penilaians->count() > 0)
                                 @php
+                                    $penilaian = $penilaians->first();
                                     $total = $penilaian->tanggung_jawab + $penilaian->kejujuran + $penilaian->sopan_santun + $penilaian->kemandirian + $penilaian->kerja_sama;
                                     $predikat = '-';
                                     $badge = 'secondary';
@@ -128,8 +164,8 @@
                             @endif
                         </li>
                         <li class="list-group-item px-0">
-                            <strong>Total Skor:</strong>
-                            @if($penilaian)
+                            <strong>Total Skor (Penilaian Terakhir):</strong>
+                            @if($penilaians->count() > 0)
                                 <span class="badge badge-light border text-dark float-right p-2" style="font-size: 14px;">{{ $total }} / 25</span>
                             @else
                                 <span class="badge badge-light border text-dark float-right">-</span>

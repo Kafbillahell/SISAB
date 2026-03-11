@@ -109,6 +109,12 @@
     </li>
     @endif
 
+    <li class="nav-item {{ request()->is('periode*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('periode.index') }}">
+            <i class="fas fa-fw fa-clock"></i>
+            <span>Atur Periode</span></a>
+    </li>
+
     <li class="nav-item {{ request()->is('settings/lokasi*') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('settings.lokasi') }}">
             <i class="fas fa-fw fa-map-marker-alt"></i>

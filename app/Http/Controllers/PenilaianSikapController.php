@@ -13,10 +13,34 @@ class PenilaianSikapController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $siswas = \App\Models\Siswa::with('user')->get();
-        // optionally load rombel? Let's just pass siswas
+        $jurusans = \App\Models\Jurusan::all();
+        $semuaKelas = \App\Models\Kelas::all();
+        $periodes = \App\Models\Periode::where('is_active', true)->get();
+
+        $query = \App\Models\Siswa::with(['user', 'anggotaRombels.rombel.kelas.jurusan']);
+
+        // Filter Jurusan
+        if (request()->filled('jurusan_id')) {
+            $query->whereHas('anggotaRombels.rombel.kelas', function ($q) {
+                $q->where('jurusan_id', request('jurusan_id'));
+            });
+        }
+
+        // Filter Kelas
+        if (request()->filled('kelas_id')) {
+            $query->whereHas('anggotaRombels.rombel', function ($q) {
+                $q->where('kelas_id', request('kelas_id'));
+            });
+        }
+
+        $siswas = $query->get();
+
+        // Pass selected filters for the view to retain selected state
+        $selected_jurusan = request('jurusan_id');
+        $selected_kelas = request('kelas_id');
+        $selected_periode = request('periode_id');
         
-        return view('penilaian-sikap.index', compact('siswas'));
+        return view('penilaian-sikap.index', compact('siswas', 'jurusans', 'semuaKelas', 'periodes', 'selected_jurusan', 'selected_kelas', 'selected_periode'));
     }
 
     public function form($siswa_id)
@@ -26,9 +50,23 @@ class PenilaianSikapController extends Controller
         }
 
         $siswa = \App\Models\Siswa::findOrFail($siswa_id);
-        $penilaian = \App\Models\PenilaianSikap::where('siswa_id', $siswa_id)->first();
+        
+        $periode_id = request('periode_id');
+        if (!$periode_id) {
+            $periodeAktif = \App\Models\Periode::where('is_active', true)->first();
+            $periode_id = $periodeAktif ? $periodeAktif->id : null;
+        }
 
-        return view('penilaian-sikap.form', compact('siswa', 'penilaian'));
+        $penilaian = null;
+        if ($periode_id) {
+            $penilaian = \App\Models\PenilaianSikap::where('siswa_id', $siswa_id)
+                ->where('periode_id', $periode_id)
+                ->first();
+        }
+
+        $periodes = \App\Models\Periode::where('is_active', true)->get();
+
+        return view('penilaian-sikap.form', compact('siswa', 'penilaian', 'periodes', 'periode_id'));
     }
 
     public function store(Request $request, $siswa_id)
@@ -38,6 +76,7 @@ class PenilaianSikapController extends Controller
         }
 
         $request->validate([
+            'periode_id' => 'required|exists:periodes,id',
             'tanggung_jawab' => 'required|integer|min:1|max:5',
             'kejujuran' => 'required|integer|min:1|max:5',
             'sopan_santun' => 'required|integer|min:1|max:5',
@@ -47,7 +86,7 @@ class PenilaianSikapController extends Controller
         ]);
 
         \App\Models\PenilaianSikap::updateOrCreate(
-            ['siswa_id' => $siswa_id],
+            ['siswa_id' => $siswa_id, 'periode_id' => $request->periode_id],
             [
                 'penilai_id' => auth()->id(),
                 'tanggung_jawab' => $request->tanggung_jawab,
@@ -69,8 +108,18 @@ class PenilaianSikapController extends Controller
         }
 
         $siswa = \App\Models\Siswa::findOrFail($siswa_id);
-        $penilaian = \App\Models\PenilaianSikap::with('penilai')->where('siswa_id', $siswa_id)->first();
+        
+        $periode_id = request('periode_id');
+        
+        $query = \App\Models\PenilaianSikap::with(['penilai', 'periode'])->where('siswa_id', $siswa_id);
+        
+        if ($periode_id) {
+            $query->where('periode_id', $periode_id);
+        }
+        
+        $penilaians = $query->orderBy('created_at', 'desc')->get();
+        $periodes = \App\Models\Periode::all();
 
-        return view('penilaian-sikap.show', compact('siswa', 'penilaian'));
+        return view('penilaian-sikap.show', compact('siswa', 'penilaians', 'periodes', 'periode_id'));
     }
 }
