@@ -286,6 +286,39 @@ class PresensiController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Sesi absen sudah berakhir atau tidak sesuai hari!'], 403);
         }
 
+        // --- VALIDASI GEOLOKASI (GPS) ---
+        $lokasiSekolah = \App\Models\Setting::getValue('lokasi_kantor');
+        $radiusSekolah = \App\Models\Setting::getValue('radius_absen', 100);
+
+        if ($lokasiSekolah && $request->has('lat') && $request->has('lng')) {
+            $userLat = $request->lat;
+            $userLng = $request->lng;
+            
+            $coords = explode(',', $lokasiSekolah);
+            $sekolahLat = $coords[0];
+            $sekolahLng = $coords[1];
+
+            // Hitung jarak (Haversine Formula) m
+            $earthRadius = 6371000; // meter
+            $dLat = deg2rad($userLat - $sekolahLat);
+            $dLng = deg2rad($userLng - $sekolahLng);
+            
+            $a = sin($dLat/2) * sin($dLat/2) +
+                 cos(deg2rad($sekolahLat)) * cos(deg2rad($userLat)) * 
+                 sin($dLng/2) * sin($dLng/2);
+            $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+            $distance = round($earthRadius * $c);
+
+            if ($distance > $radiusSekolah) {
+                return response()->json([
+                    'status' => 'out_of_range', 
+                    'message' => 'Anda berada di luar radius sekolah.',
+                    'distance' => $distance,
+                    'radius_limit' => $radiusSekolah
+                ], 403);
+            }
+        }
+
         $todayForCheck = Carbon::today()->setTimezone('Asia/Jakarta')->format('Y-m-d');
 
         // Cek 1: Apakah ada presensi HADIR untuk jadwal spesifik hari ini?
@@ -345,7 +378,9 @@ class PresensiController extends Controller
                     'siswa_id' => $siswaId,
                     'jadwal_id' => $jadwalId,
                     'waktu_scan' => now()->setTimezone('Asia/Jakarta'),
-                    'keterangan' => 'Hadir'
+                    'keterangan' => 'Hadir',
+                    'latitude' => $request->lat,
+                    'longitude' => $request->lng
                 ]);
 
                 return response()->json(['status' => 'success', 'message' => 'Absensi berhasil dicatat!']);

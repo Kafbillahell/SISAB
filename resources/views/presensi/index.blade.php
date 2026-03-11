@@ -230,6 +230,11 @@
                                                                     <td>{{ $d->jadwal->mapel->nama_mapel ?? '-' }}</td>
                                                                     <td class="text-center">
                                                                         <span class="badge badge-secondary px-2 py-1">{{ $d->keterangan }}</span>
+                                                                        @if($d->latitude && $d->longitude)
+                                                                            <a href="https://www.google.com/maps?q={{ $d->latitude }},{{ $d->longitude }}" target="_blank" class="btn btn-sm btn-outline-info ml-1 border-0 p-0" title="Lihat Lokasi">
+                                                                                <i class="fas fa-map-marker-alt"></i>
+                                                                            </a>
+                                                                        @endif
                                                                     </td>
                                                                 </tr>
                                                             @empty
@@ -278,7 +283,14 @@
                             <td><small>{{ \Carbon\Carbon::parse($p->waktu_scan)->format('d/m H:i') }}</small></td>
                             <td>{{ $p->siswa->nama_siswa }}</td>
                             <td>{{ $p->jadwal->mapel->nama_mapel }}</td>
-                            <td><span class="badge badge-light">{{ $p->keterangan }}</span></td>
+                            <td>
+                                <span class="badge badge-light">{{ $p->keterangan }}</span>
+                                @if($p->latitude && $p->longitude)
+                                    <a href="https://www.google.com/maps?q={{ $p->latitude }},{{ $p->longitude }}" target="_blank" class="text-info ml-1" title="Lihat Lokasi">
+                                        <i class="fas fa-map-marker-alt fa-xs"></i>
+                                    </a>
+                                @endif
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>
