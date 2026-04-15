@@ -38,4 +38,14 @@ class Siswa extends Model
     {
         return $this->hasMany(AnggotaRombel::class, 'siswa_id');
     }
+
+    public function studentVouchers()
+    {
+        return $this->hasMany(StudentVoucher::class);
+    }
+
+    public function getTotalPoints()
+    {
+        return $this->presensis()->sum('points') ?? 0;
+    }
 }

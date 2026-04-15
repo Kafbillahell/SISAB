@@ -101,6 +101,39 @@
             <span>Input Manual</span></a>
     </li>
 
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-heading">
+        Poin & Reward
+    </div>
+
+    <li class="nav-item {{ request()->is('my-points*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('points.myPoints') }}">
+            <i class="fas fa-fw fa-trophy"></i>
+            <span>Poin Saya</span></a>
+    </li>
+
+    <li class="nav-item {{ request()->is('vouchers*', 'my-vouchers*') ? 'active' : '' }}">
+        <a class="nav-link {{ request()->is('vouchers*', 'my-vouchers*') ? '' : 'collapsed' }}" href="#" data-toggle="collapse" data-target="#collapseVoucher"
+            aria-expanded="true" aria-controls="collapseVoucher">
+            <i class="fas fa-fw fa-gift"></i>
+            <span>Voucher</span>
+        </a>
+        
+        <div id="collapseVoucher" class="collapse {{ request()->is('vouchers*', 'my-vouchers*') ? 'show' : '' }}" aria-labelledby="headingVoucher" data-parent="#accordionSidebar">
+            <div class="bg-white py-2 collapse-inner rounded">
+                <a class="collapse-item {{ request()->is('vouchers') && !request()->is('my-vouchers*') ? 'active' : '' }}" href="{{ route('vouchers.index') }}">Tukar Voucher</a>
+                <a class="collapse-item {{ request()->is('my-vouchers*') ? 'active' : '' }}" href="{{ route('vouchers.myVouchers') }}">Voucher Saya</a>
+            </div>
+        </div>
+    </li>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-heading">
+        Management
+    </div>
+
     @if(auth()->check() && in_array(auth()->user()->role, ['admin', 'guru']))
     <li class="nav-item {{ request()->is('penilaian-sikap*') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('penilaian-sikap.index') }}">

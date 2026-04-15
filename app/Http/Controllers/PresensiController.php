@@ -375,7 +375,7 @@ class PresensiController extends Controller
 
             // Insert record presensi (tangani kemungkinan unique constraint pada DB)
             try {
-                Presensi::create([
+                $presensi = Presensi::create([
                     'siswa_id' => $siswaId,
                     'jadwal_id' => $jadwalId,
                     'waktu_scan' => now()->setTimezone('Asia/Jakarta'),
@@ -383,6 +383,14 @@ class PresensiController extends Controller
                     'latitude' => $request->lat,
                     'longitude' => $request->lng
                 ]);
+
+                // Hitung poin untuk presensi ini
+                PointController::calculatePoints($presensi);
+
+                // Gunakan voucher jika siswa terlambat dan ada voucher
+                if ($presensi->points < 0) {
+                    $this->useVoucherIfAvailable($siswaId, $presensi);
+                }
 
                 return response()->json(['status' => 'success', 'message' => 'Absensi berhasil dicatat!']);
             } catch (\Illuminate\Database\QueryException $ex) {
@@ -411,5 +419,34 @@ class PresensiController extends Controller
             'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu', 'Sunday' => 'Minggu'
         ];
         return $map[$day];
+    }
+
+    /**
+     * Gunakan voucher otomatis jika siswa terlambat dan ada voucher aktif
+     */
+    private function useVoucherIfAvailable($siswaId, Presensi $presensi)
+    {
+        // Cari voucher aktif yang belum digunakan
+        $studentVoucher = \App\Models\StudentVoucher::where('siswa_id', $siswaId)
+            ->where('is_used', false)
+            ->with('voucher')
+            ->first();
+
+        if ($studentVoucher) {
+            // Update voucher sebagai digunakan
+            $studentVoucher->update([
+                'is_used' => true,
+                'used_at' => now(),
+            ]);
+
+            // Hubungkan voucher dengan presensi
+            $presensi->update([
+                'used_voucher' => true,
+                'student_voucher_id' => $studentVoucher->id,
+                'points' => 0 // Batalkan pengurangan poin karena ada voucher
+            ]);
+
+            \Log::info("Voucher digunakan otomatis untuk siswa $siswaId pada presensi {$presensi->id}");
+        }
     }
 }

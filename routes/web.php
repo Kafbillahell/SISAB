@@ -17,7 +17,9 @@ use App\Http\Controllers\{
     SesiController,
     SettingController,
     ManualPresensiController,
-    PeriodeController
+    PeriodeController,
+    PointController,
+    VoucherController
 };
 
 // --- Rute API AJAX ---
@@ -94,4 +96,10 @@ Route::middleware(['auth'])->group(function () {
     // --- Pengaturan Lokasi (GPS) ---
     Route::get('/settings/lokasi', [SettingController::class, 'index'])->name('settings.lokasi');
     Route::post('/settings/lokasi', [SettingController::class, 'update'])->name('settings.lokasi.update');
+
+    // --- Poin dan Voucher untuk Siswa ---
+    Route::get('/my-points', [PointController::class, 'myPoints'])->name('points.myPoints');
+    Route::get('/vouchers', [VoucherController::class, 'index'])->name('vouchers.index');
+    Route::post('/vouchers/redeem', [VoucherController::class, 'redeem'])->name('vouchers.redeem');
+    Route::get('/my-vouchers', [VoucherController::class, 'myVouchers'])->name('vouchers.myVouchers');
 });

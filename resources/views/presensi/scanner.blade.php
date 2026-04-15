@@ -122,6 +122,78 @@
             </div>
         </div>
     </div>
+
+    {{-- INFO WAKTU PRESENSI --}}
+    @if($jadwalAktif)
+    <div class="row justify-content-center mt-4">
+        <div class="col-xl-10 col-lg-11">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 15px;">
+                <div class="card-body p-4">
+                    <div class="row">
+                        {{-- Jam Mulai --}}
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-primary text-white p-3 mr-3" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-clock fa-lg"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block text-uppercase font-weight-bold">Jam Mulai Pelajaran</small>
+                                    <h5 class="mb-0 font-weight-bold text-dark">{{ \Carbon\Carbon::parse($jadwalAktif->jam_mulai)->format('H:i') }} WIB</h5>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Tepat Waktu --}}
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-success text-white p-3 mr-3" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-check-circle fa-lg"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block text-uppercase font-weight-bold">Tepat Waktu (Reward)</small>
+                                    <h5 class="mb-0 font-weight-bold text-success">+10 Poin</h5>
+                                    <small class="text-muted">Scan sebelum jam mulai</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Terlambat --}}
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-danger text-white p-3 mr-3" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-exclamation-circle fa-lg"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block text-uppercase font-weight-bold">Terlambat (Penalty)</small>
+                                    <h5 class="mb-0 font-weight-bold text-danger">-5 Poin</h5>
+                                    <small class="text-muted">Scan setelah jam mulai</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" style="border-top: 2px dashed rgba(0,0,0,0.1);">
+
+                    {{-- Info Tambahan --}}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert alert-info border-0 mb-0" style="background: rgba(13, 110, 253, 0.1); border-radius: 10px;">
+                                <i class="fas fa-info-circle text-info mr-2"></i>
+                                <strong>💡 Info Poin:</strong> 
+                                <br>
+                                • Anda mendapat <strong>+10 poin</strong> jika hadir sebelum jam {{ \Carbon\Carbon::parse($jadwalAktif->jam_mulai)->format('H:i') }}
+                                <br>
+                                • Anda akan dikurangi <strong>5 poin</strong> jika hadir setelah jam {{ \Carbon\Carbon::parse($jadwalAktif->jam_mulai)->format('H:i') }}
+                                <br>
+                                • Kumpulkan <strong>minimal 15 poin</strong> untuk menukar <strong>1 voucher</strong> (untuk menghindari pengurangan poin)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 
 <style>
