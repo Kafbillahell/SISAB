@@ -22,7 +22,7 @@ class PresensiController extends Controller
         if ($user->role == 'guru') {
             $guru = Guru::where('user_id', $user->id)->first();
             $rombelIds = Jadwal::where('guru_id', $guru->id)->pluck('rombel_id')->unique();
-            $rombels = Rombel::whereIn('id', $rombelIds)->get();
+            $rombels = Rombel::wherIn('id', $rombelIds)->get();
         } else {
             $rombels = Rombel::all();
         }
@@ -69,7 +69,7 @@ class PresensiController extends Controller
                 ->pluck('siswa_id');
 
             $siswas = Siswa::whereIn('id', $siswaIds)->get();
-
+// 'nama_rombel'=> $rombels->firstWhere('id', $rombelId)->nama_rombel,
             // Hitung total sesi yang unik (berapa kali pertemuan terjadi)
             $total_sesi = Presensi::whereHas('jadwal', function($q) use ($request, $rombelId, $guru) {
                     $q->where('rombel_id', $rombelId);
@@ -88,7 +88,7 @@ class PresensiController extends Controller
 
             $total_sesi_fixed = $total_sesi > 0 ? $total_sesi : 1;
 
-            $siswa_stats = $siswas->map(function($s) use ($request, $startDate, $endDate, $total_sesi_fixed, $rombelId, $guru) {
+            $siswa_stats = $siswas->map(function($s) use ($request, $startDate, $endDate, $total_sesi_fixed, $rombelId, $guru, $rombels) {
                 $p_siswa = Presensi::where('siswa_id', $s->id)
                     ->whereBetween('waktu_scan', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
                     ->whereHas('jadwal', function($q) use ($request, $rombelId, $guru) {
@@ -110,6 +110,7 @@ class PresensiController extends Controller
                     'nisn' => $s->nisn,
                     'foto' => $s->foto,
                     'total_hadir' => $hadir,
+                    'nama_rombel'=> $rombels->firstWhere('id', $rombelId)->nama_rombel,
                     'total_izin' => $p_siswa->where('keterangan', 'Izin')->count(),
                     'total_sakit' => $p_siswa->where('keterangan', 'Sakit')->count(),
                     'total_alpa' => $p_siswa->where('keterangan', 'Alpa')->count(),

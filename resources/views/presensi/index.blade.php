@@ -151,6 +151,7 @@
                     <thead class="bg-light text-dark">
                         <tr class="text-center">
                             <th>Siswa</th>
+                            <th width="70">Kelas</th>
                             <th width="70">Hadir</th>
                             <th width="70">Izin</th>
                             <th width="70">Sakit</th>
@@ -175,7 +176,8 @@
                                     </div>
                                 </div>
                             </td>
-                            <td class="text-center font-weight-bold text-success">{{ $stat->total_hadir }}</td>
+                            <td class="text-center font-weight-bold text-success">{{ $stat->nama_rombel  }}</td>
+                            <td class="text-center font-weight-bold text-success">{{ $stat->total_hadir }}</td></td>
                             <td class="text-center text-info">{{ $stat->total_izin }}</td>
                             <td class="text-center text-warning">{{ $stat->total_sakit }}</td>
                             <td class="text-center text-danger">{{ $stat->total_alpa }}</td>
