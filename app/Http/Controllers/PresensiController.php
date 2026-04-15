@@ -22,7 +22,7 @@ class PresensiController extends Controller
         if ($user->role == 'guru') {
             $guru = Guru::where('user_id', $user->id)->first();
             $rombelIds = Jadwal::where('guru_id', $guru->id)->pluck('rombel_id')->unique();
-            $rombels = Rombel::wherIn('id', $rombelIds)->get();
+            $rombels = Rombel::whereIn('id', $rombelIds)->get();
         } else {
             $rombels = Rombel::all();
         }
