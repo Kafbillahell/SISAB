@@ -165,20 +165,13 @@ class PresensiController extends Controller
 
             if ($anggotaRombel) {
                 // Strategi pencarian jadwal untuk siswa:
-                // 1. Cari jadwal yang SEDANG BERJALAN (jam_mulai <= sekarang <= jam_selesai) di hari ini
+                // HANYA cari jadwal yang SEDANG BERJALAN (jam_mulai <= sekarang <= jam_selesai) di hari ini
+                // Untuk memberikan KEAMANAN: siswa tidak bisa scan sebelum jadwal dimulai
                 $jadwalAktif = \App\Models\Jadwal::where('rombel_id', $anggotaRombel->rombel_id)
                     ->where('hari', $hariIndo)
                     ->whereTime('jam_mulai', '<=', $jamSekarang)
                     ->whereTime('jam_selesai', '>=', $jamSekarang)
                     ->first();
-                
-                // 2. Jika tidak ada jadwal aktif hari ini, tampilkan jadwal PERTAMA hari ini (untuk siswa bisa scan lebih awal)
-                if (!$jadwalAktif) {
-                    $jadwalAktif = \App\Models\Jadwal::where('rombel_id', $anggotaRombel->rombel_id)
-                        ->where('hari', $hariIndo)
-                        ->orderBy('jam_mulai', 'asc')
-                        ->first();
-                }
                 
                 if ($jadwalAktif) {
                     $targetGuruId = $jadwalAktif->guru_id;

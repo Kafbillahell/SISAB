@@ -152,7 +152,7 @@
                                 <div>
                                     <small class="text-muted d-block text-uppercase font-weight-bold">Tepat Waktu (Reward)</small>
                                     <h5 class="mb-0 font-weight-bold text-success">+10 Poin</h5>
-                                    <small class="text-muted">Scan sebelum jam mulai</small>
+                                    <small class="text-muted">Scan dalam 2 menit</small>
                                 </div>
                             </div>
                         </div>
@@ -166,7 +166,7 @@
                                 <div>
                                     <small class="text-muted d-block text-uppercase font-weight-bold">Terlambat (Penalty)</small>
                                     <h5 class="mb-0 font-weight-bold text-danger">-5 Poin</h5>
-                                    <small class="text-muted">Scan setelah jam mulai</small>
+                                    <small class="text-muted">Setelah 2 menit</small>
                                 </div>
                             </div>
                         </div>
@@ -179,13 +179,13 @@
                         <div class="col-12">
                             <div class="alert alert-info border-0 mb-0" style="background: rgba(13, 110, 253, 0.1); border-radius: 10px;">
                                 <i class="fas fa-info-circle text-info mr-2"></i>
-                                <strong>💡 Info Poin:</strong> 
+                                <strong>💡 Cara Kerja Sistem Poin:</strong> 
                                 <br>
-                                • Anda mendapat <strong>+10 poin</strong> jika hadir sebelum jam {{ \Carbon\Carbon::parse($jadwalAktif->jam_mulai)->format('H:i') }}
+                                • <strong>Tepat Waktu (+10 Poin)</strong>: Hadir antara jam {{ \Carbon\Carbon::parse($jadwalAktif->jam_mulai)->format('H:i') }} hingga {{ \Carbon\Carbon::parse($jadwalAktif->jam_mulai)->addMinutes(2)->format('H:i') }} (Grace period 2 menit setelah jam mulai)
                                 <br>
-                                • Anda akan dikurangi <strong>5 poin</strong> jika hadir setelah jam {{ \Carbon\Carbon::parse($jadwalAktif->jam_mulai)->format('H:i') }}
+                                • <strong>Terlambat (-5 Poin)</strong>: Hadir setelah jam {{ \Carbon\Carbon::parse($jadwalAktif->jam_mulai)->addMinutes(2)->format('H:i') }}
                                 <br>
-                                • Kumpulkan <strong>minimal 15 poin</strong> untuk menukar <strong>1 voucher</strong> (untuk menghindari pengurangan poin)
+                                • Kumpulkan <strong>minimal 15 poin</strong> untuk menukar <strong>1 voucher</strong> (gunakan saat terlambat agar poin tidak berkurang)
                             </div>
                         </div>
                     </div>

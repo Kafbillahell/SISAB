@@ -31,15 +31,42 @@
             </div>
         </div>
 
+        <!-- Points Breakdown -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-plus-circle text-success"></i> Poin Positif
+                        </h5>
+                        <p class="card-text">+{{ $positivePoints }}</p>
+                        <small class="text-muted">Dari presensi tepat waktu (+10 per hari)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-minus-circle text-danger"></i> Poin Negatif
+                        </h5>
+                        <p class="card-text">-{{ $negativePoints }}</p>
+                        <small class="text-muted">Dari presensi terlambat (-5 per hari)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Info Poin -->
         <div class="row mb-4">
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-body">
                         <h5 class="card-title">
-                            <i class="fas fa-clock text-success"></i> Tepat Waktu
+                            <i class="fas fa-check-circle text-success"></i> Tepat Waktu
                         </h5>
                         <p class="card-text">+10 Poin</p>
+                        <small class="text-muted">Scan dalam 2 menit setelah jam pelajaran dimulai</small>
                     </div>
                 </div>
             </div>
@@ -50,9 +77,27 @@
                             <i class="fas fa-exclamation-circle text-danger"></i> Terlambat
                         </h5>
                         <p class="card-text">-5 Poin</p>
+                        <small class="text-muted">Scan lebih dari 2 menit setelah jam pelajaran dimulai</small>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Penjelasan Sistem Poin -->
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <h6 class="alert-heading">
+                <i class="fas fa-lightbulb"></i> Cara Kerja Sistem Poin
+            </h6>
+            <p class="mb-2">Poin Anda dihitung dari setiap presensi yang Anda lakukan:</p>
+            <ul class="mb-0">
+                <li><strong>Poin Positif</strong> (+10): Ditambahkan ketika Anda hadir tepat waktu</li>
+                <li><strong>Poin Negatif</strong> (-5): Dikurangi ketika Anda hadir terlambat</li>
+                <li><strong>Total Poin</strong>: Hasil dari poin positif dikurangi poin negatif (otomatis offset)</li>
+            </ul>
+            <hr>
+            <strong class="d-block mb-2">Contoh:</strong>
+            <small>Jika Anda scan tepat waktu 3 hari (+30) dan terlambat 2 hari (-10), maka total poin = 30 - 10 = +20 poin</small>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
 
         <!-- Riwayat Presensi dengan Poin -->
@@ -77,7 +122,7 @@
                         <tbody>
                             @forelse($presensis as $presensi)
                                 <tr>
-                                    <td>{{ $presensi->tanggal ? \Carbon\Carbon::parse($presensi->tanggal)->format('d M Y') : '-' }}</td>
+                                    <td>{{ $presensi->waktu_scan ? \Carbon\Carbon::parse($presensi->waktu_scan)->format('d M Y') : '-' }}</td>
                                     <td>
                                         {{ $presensi->jadwal?->rombel?->nama_rombel ?? '-' }}
                                     </td>
