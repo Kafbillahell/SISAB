@@ -17,10 +17,13 @@ class Voucher extends Model
         'used',
         'valid_until',
         'is_active',
+        'usage_type',
+        'valid_minutes',
     ];
 
     protected $casts = [
         'valid_until' => 'datetime',
+        'is_active' => 'boolean',
     ];
 
     public function studentVouchers()

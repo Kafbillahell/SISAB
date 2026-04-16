@@ -102,4 +102,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/vouchers', [VoucherController::class, 'index'])->name('vouchers.index');
     Route::post('/vouchers/redeem', [VoucherController::class, 'redeem'])->name('vouchers.redeem');
     Route::get('/my-vouchers', [VoucherController::class, 'myVouchers'])->name('vouchers.myVouchers');
+
+    // --- Admin Voucher Management ---
+    Route::prefix('admin')->name('admin.')->group(function() {
+        Route::resource('vouchers', \App\Http\Controllers\Admin\VoucherController::class);
+        Route::post('/vouchers/{voucher}/toggle-active', [\App\Http\Controllers\Admin\VoucherController::class, 'toggleActive']);
+    });
 });

@@ -142,6 +142,18 @@
     </li>
     @endif
 
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-heading">
+        Pengaturan
+    </div>
+
+    <li class="nav-item {{ request()->is('admin/vouchers*') ? 'active' : '' }}">
+        <a class="nav-link" href="{{ route('admin.vouchers.index') }}">
+            <i class="fas fa-fw fa-cogs"></i>
+            <span>Manajemen Voucher</span></a>
+    </li>
+
     <li class="nav-item {{ request()->is('periode*') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route('periode.index') }}">
             <i class="fas fa-fw fa-clock"></i>
